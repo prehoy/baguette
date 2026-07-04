@@ -4,7 +4,7 @@ title: Cron — baguette
 
 # Cron
 
-Cron is an optional layer for scheduled jobs. Drop a file in `cron/`, and `serve()` starts it automatically — no `cron/` directory means the code is never imported. Each run is guarded by a **Postgres advisory lock**, so with several instances running the same schedule, a given tick fires exactly once.
+Cron is an optional layer for scheduled jobs. Drop a file in `cron/`, and `serve()` starts it automatically — no `cron/` directory means the code is never imported. Each tick runs behind a **lock** so a job never overlaps itself; on a single instance that needs no infrastructure, and when you scale to several replicas you point the lock at shared storage so a given tick fires exactly once across the fleet.
 
 ```ts
 // cron/sendReminders.ts — a job is two named exports: details + process
@@ -21,9 +21,37 @@ export const process = async () => {
 ## How it works
 
 - **File-based** — one job per file in `cron/`, mounted by convention.
-- **Advisory lock** — before running, a job acquires a Postgres advisory lock keyed to its name. Only one instance across your fleet wins the tick; the rest skip it. No duplicate sends, no external scheduler.
+- **Overlap-safe** — before running, a job acquires a lock keyed to its name. If it's held, the tick is skipped — no duplicate runs, no external scheduler.
 - **Opt-in** — the layer is off until the `cron/` directory exists. The framework imports no scheduler otherwise.
-- **Raw SQL only** — the lock uses raw SQL; cron pulls in no ORM.
+
+## Choosing a lock backend
+
+The lock is chosen by the `CRON_LOCK` env var. The default (`memory`) needs **no infrastructure** — cron just works on a single instance. Pick a shared or persistent backend only when you actually need it.
+
+| `CRON_LOCK` | Scope | Needs | When to use |
+| --- | --- | --- | --- |
+| `memory` *(default)* | This process only | — | A single instance. Zero config. |
+| `none` | No lock | — | You want every tick to fire, always. |
+| `sqlite` | One node / shared volume | *(optional)* `CRON_LOCK_SQLITE_PATH` | A single instance where the lock should survive a restart. |
+| `postgres` | All replicas on the DB | `DATABASE_URL` | Multiple replicas, you already run Postgres. Uses `pg_try_advisory_xact_lock` — no table. |
+| `redis` | All replicas on the Redis | `REDIS_URL` | Multiple replicas, you already run Redis. Uses `SET NX EX`. |
+
+```bash
+# single instance — nothing to set, this is the default
+# CRON_LOCK=memory
+
+# scale out on Postgres
+CRON_LOCK=postgres
+DATABASE_URL=postgres://user:pass@host:5432/db
+
+# or on Redis
+CRON_LOCK=redis
+REDIS_URL=redis://host:6379
+```
+
+Per-backend URL overrides exist if the lock store differs from your app's main one: `CRON_LOCK_DATABASE_URL`, `CRON_LOCK_REDIS_URL`. `sqlite` and `redis` use Bun's built-in drivers, so no backend adds an npm dependency.
+
+> **Note on `sqlite`:** the lock lives in one file, so it coordinates only processes that share it — a single node or a shared volume, **not** separate machines. For true cross-replica locking use `postgres` or `redis`.
 
 ## Scaffold one
 

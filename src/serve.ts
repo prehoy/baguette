@@ -22,9 +22,11 @@ export default async function serve(opts: ServeOptions = {}) {
   const cronDir = (typeof opts.cron === "object" && opts.cron.dir) || "./cron";
   if (opts.cron !== false && existsSync(path.resolve(cronDir))) {
     const { startCron } = await import("./cron");
+    // Lock backend is chosen by CRON_LOCK env (default: memory / single-instance).
+    // Pass an explicit db only if the caller set one.
     await startCron({
       dir: cronDir,
-      db: (typeof opts.cron === "object" ? opts.cron.db : undefined) ?? Bun.env.DATABASE_URL,
+      db: typeof opts.cron === "object" ? opts.cron.db : undefined,
     });
   }
   if (opts.automations) {

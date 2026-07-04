@@ -1,4 +1,5 @@
-import { Glob } from "bun";
+import { Glob, RedisClient } from "bun";
+import { Database } from "bun:sqlite";
 import path from "node:path";
 import { CronJob } from "cron";
 import postgres from "postgres";
@@ -24,7 +25,26 @@ export interface CronOptions {
   onRun?: (name: string, result: unknown) => void;
 }
 
-// Postgres advisory locks replace a CronLock table + TTL cleanup entirely: the
+const LOCK_TTL_SEC = 300; // stale-lock reclaim for backends that persist a row
+
+// In-process lock — the zero-config default. Prevents a job from overlapping
+// itself on THIS instance. Does NOT coordinate across replicas (each process has
+// its own Set), so it's for single-instance deploys. Scale out -> pick a shared
+// backend (postgres/redis) via CRON_LOCK.
+export function memoryLock(): LockRunner {
+  const held = new Set<string>();
+  return async (key, fn) => {
+    if (held.has(key)) return;
+    held.add(key);
+    try {
+      await fn();
+    } finally {
+      held.delete(key);
+    }
+  };
+}
+
+// Postgres advisory lock — SHARED across every replica on the same DB. The
 // xact-scoped lock auto-releases when the transaction ends. ORM-agnostic (raw SQL).
 export function pgAdvisoryLock(db: string | postgres.Sql): LockRunner {
   const sql = typeof db === "string" ? postgres(db) : db;
@@ -35,6 +55,85 @@ export function pgAdvisoryLock(db: string | postgres.Sql): LockRunner {
       await fn();
     });
   };
+}
+
+// Redis lock — SHARED across replicas pointing at the same Redis. SET NX EX is
+// the canonical distributed lock; released with a compare-and-delete so we never
+// drop someone else's lock after a TTL lapse. Uses Bun's built-in client (no dep).
+export function redisLock(url: string, ttlSec = LOCK_TTL_SEC): LockRunner {
+  const client = new RedisClient(url);
+  return async (key, fn) => {
+    const lk = `baguette:cron:${key}`;
+    const token = crypto.randomUUID();
+    const ok = await client.send("SET", [lk, token, "NX", "EX", String(ttlSec)]);
+    if (ok !== "OK") return; // held elsewhere
+    try {
+      await fn();
+    } finally {
+      // release only if the lock is still ours (avoids releasing after a stall)
+      await client.send("EVAL", [
+        "if redis.call('get',KEYS[1])==ARGV[1] then return redis.call('del',KEYS[1]) else return 0 end",
+        "1",
+        lk,
+        token,
+      ]);
+    }
+  };
+}
+
+// SQLite lock — persists across restarts on ONE node (or a shared volume). NOT a
+// cross-machine distributed lock: separate pods have separate files. Good for a
+// single instance that wants the lock to survive a crash. Bun's built-in sqlite.
+export function sqliteLock(file: string, ttlSec = LOCK_TTL_SEC): LockRunner {
+  const db = new Database(file);
+  db.run("CREATE TABLE IF NOT EXISTS cron_locks (slug TEXT PRIMARY KEY, acquired_at INTEGER)");
+  return async (key, fn) => {
+    const now = Math.floor(Date.now() / 1000);
+    db.run("DELETE FROM cron_locks WHERE slug = ? AND acquired_at < ?", [key, now - ttlSec]);
+    const res = db.run("INSERT OR IGNORE INTO cron_locks (slug, acquired_at) VALUES (?, ?)", [key, now]);
+    if (res.changes === 0) return; // row already present -> held
+    try {
+      await fn();
+    } finally {
+      db.run("DELETE FROM cron_locks WHERE slug = ?", [key]);
+    }
+  };
+}
+
+/**
+ * Pick the lock backend from env. Default `memory` — cron works out of the box
+ * on a single instance with no infra. Opt into a shared/persistent backend when
+ * you scale out:
+ *
+ *   CRON_LOCK=memory                     (default) in-process, single instance
+ *   CRON_LOCK=none                       no lock — every tick fires
+ *   CRON_LOCK=postgres  + DATABASE_URL   advisory lock, shared across replicas
+ *   CRON_LOCK=redis     + REDIS_URL      SET NX EX, shared across replicas
+ *   CRON_LOCK=sqlite    [+ CRON_LOCK_SQLITE_PATH]  persists on one node/volume
+ *
+ * Per-backend URL overrides: CRON_LOCK_DATABASE_URL, CRON_LOCK_REDIS_URL.
+ */
+export function lockFromEnv(): LockRunner {
+  const kind = (Bun.env.CRON_LOCK ?? "memory").toLowerCase();
+  const need = (v: string | undefined, name: string) => {
+    if (!v) throw new Error(`CRON_LOCK=${kind} requires ${name} to be set`);
+    return v;
+  };
+  switch (kind) {
+    case "memory":
+      return memoryLock();
+    case "none":
+      return async (_k, fn) => fn();
+    case "postgres":
+    case "pg":
+      return pgAdvisoryLock(need(Bun.env.CRON_LOCK_DATABASE_URL ?? Bun.env.DATABASE_URL, "DATABASE_URL"));
+    case "redis":
+      return redisLock(need(Bun.env.CRON_LOCK_REDIS_URL ?? Bun.env.REDIS_URL, "REDIS_URL"));
+    case "sqlite":
+      return sqliteLock(Bun.env.CRON_LOCK_SQLITE_PATH ?? ".baguette-cron.sqlite");
+    default:
+      throw new Error(`Unknown CRON_LOCK="${kind}" (use memory|none|postgres|redis|sqlite)`);
+  }
 }
 
 export async function loadCronJobs(dir: string): Promise<CronDefinition[]> {
@@ -68,8 +167,9 @@ export async function runCronJob(
 
 export async function startCron(opts: CronOptions = {}): Promise<void> {
   const dir = opts.dir ?? "./cron";
-  const lock = opts.lock ?? (opts.db ? pgAdvisoryLock(opts.db) : undefined);
-  if (!lock) logger.warn({ message: "startCron: no db/lock — jobs may double-run across replicas" });
+  // Precedence: explicit lock > explicit db (postgres) > CRON_LOCK env (default memory).
+  const lock = opts.lock ?? (opts.db ? pgAdvisoryLock(opts.db) : lockFromEnv());
+  logger.info({ message: `Cron lock backend: ${opts.lock ? "custom" : opts.db ? "postgres" : (Bun.env.CRON_LOCK ?? "memory")}` });
 
   const jobs = await loadCronJobs(dir);
   for (const job of jobs) {
