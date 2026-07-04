@@ -67,7 +67,23 @@ function resolveCors(opt: CorsOption | undefined): HonoCors {
 export async function createApp(opts: AppOptions = {}): Promise<OpenAPIHono> {
   if (opts.env?.required) validateEnv(opts.env.required);
 
-  const app = new OpenAPIHono();
+  // Format request-validation failures into the clean { error, issues } shape
+  // (matching ErrorSchema) instead of leaking the raw ZodError blob to clients.
+  const app = new OpenAPIHono({
+    defaultHook: (result, c) => {
+      if (!result.success) {
+        const issues = result.error.issues.map((i) => ({
+          field: i.path.join(".") || "(body)",
+          message: i.message,
+        }));
+        const first = issues[0];
+        return c.json(
+          { error: first ? `${first.field}: ${first.message}` : "Invalid request", issues },
+          400,
+        );
+      }
+    },
+  });
 
   if (opts.securityHeaders) app.use("*", secureHeaders());
   if (opts.cors !== false) app.use("*", cors(resolveCors(opts.cors)));

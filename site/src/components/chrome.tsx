@@ -131,14 +131,23 @@ export const SiteFooter = component$(() => (
         </div>
       </div>
     </div>
-    <div class="mt-10 flex items-center justify-between border-t border-ink/10 pt-5">
+    <div class="mt-10 flex flex-wrap items-center justify-between gap-3 border-t border-ink/10 pt-5">
       <div class="flex gap-2">
         <span class="h-3.5 w-3.5 bg-ink" />
         <span class="h-3.5 w-3.5 border-2 border-ink" />
         <span class="h-3.5 w-3.5 bg-crust" />
       </div>
       <span class="text-[10px] uppercase tracking-[0.2em] text-ink/30">
-        MIT · usebaguette.com
+        A{" "}
+        <a
+          href="https://prehoy.com"
+          target="_blank"
+          rel="noreferrer"
+          class="text-ink/50 underline decoration-crust decoration-2 underline-offset-2 transition-colors hover:text-ink"
+        >
+          Prehoy Industries
+        </a>{" "}
+        Project · MIT · usebaguette.com
       </span>
     </div>
   </footer>
