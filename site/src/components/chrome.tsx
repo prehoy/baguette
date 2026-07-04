@@ -3,13 +3,41 @@ import { Link } from "@builder.io/qwik-city";
 
 const GITHUB = "https://github.com/prehoy/baguette";
 
+export const BaguetteMark = component$<{ class?: string }>(({ class: cls }) => (
+  <svg
+    viewBox="0 0 64 64"
+    class={`flex-none ${cls ?? "h-5 w-5"}`}
+    aria-hidden="true"
+    fill="none"
+  >
+    <g transform="rotate(-35 32 32)">
+      <rect
+        x="5"
+        y="24"
+        width="54"
+        height="16"
+        rx="8"
+        fill="#c8963e"
+        stroke="#0a0a0a"
+        stroke-width="3.6"
+      />
+      <g stroke="#0a0a0a" stroke-width="2.8" stroke-linecap="round">
+        <line x1="17" y1="29.5" x2="22" y2="35.5" />
+        <line x1="26" y1="29.5" x2="31" y2="35.5" />
+        <line x1="35" y1="29.5" x2="40" y2="35.5" />
+        <line x1="44" y1="29.5" x2="49" y2="35.5" />
+      </g>
+    </g>
+  </svg>
+));
+
 export const Wordmark = component$<{ class?: string }>(({ class: cls }) => (
   <Link
     href="/"
     class={`group inline-flex items-center gap-2.5 ${cls ?? ""}`}
     aria-label="baguette — home"
   >
-    <span class="h-4 w-4 bg-crust transition-transform group-hover:rotate-45" />
+    <BaguetteMark class="h-6 w-6 transition-transform group-hover:-rotate-6" />
     <span class="font-body text-[17px] font-bold leading-none tracking-tight text-ink">
       baguette
     </span>

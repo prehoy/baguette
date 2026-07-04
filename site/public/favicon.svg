@@ -1,9 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
-  <rect width="64" height="64" fill="#fafafa"/>
-  <g transform="rotate(-45 32 32)">
-    <rect x="12" y="26" width="40" height="12" fill="#c8963e" stroke="#0a0a0a" stroke-width="3"/>
-    <line x1="22" y1="29" x2="26" y2="35" stroke="#0a0a0a" stroke-width="2.5"/>
-    <line x1="30" y1="29" x2="34" y2="35" stroke="#0a0a0a" stroke-width="2.5"/>
-    <line x1="38" y1="29" x2="42" y2="35" stroke="#0a0a0a" stroke-width="2.5"/>
+  <g transform="rotate(-35 32 32)">
+    <rect x="5" y="24" width="54" height="16" rx="8" fill="#c8963e" stroke="#0a0a0a" stroke-width="3.6"/>
+    <g stroke="#0a0a0a" stroke-width="2.8" stroke-linecap="round">
+      <line x1="17" y1="29.5" x2="22" y2="35.5"/>
+      <line x1="26" y1="29.5" x2="31" y2="35.5"/>
+      <line x1="35" y1="29.5" x2="40" y2="35.5"/>
+      <line x1="44" y1="29.5" x2="49" y2="35.5"/>
+    </g>
   </g>
 </svg>
