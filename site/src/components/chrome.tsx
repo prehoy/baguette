@@ -1,7 +1,7 @@
 import { component$, Slot } from "@builder.io/qwik";
 import { Link } from "@builder.io/qwik-city";
 
-const GITHUB = "https://github.com/darka-io/baguette";
+const GITHUB = "https://github.com/prehoy/baguette";
 
 export const Wordmark = component$<{ class?: string }>(({ class: cls }) => (
   <Link

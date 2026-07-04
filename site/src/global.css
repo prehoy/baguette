@@ -237,7 +237,11 @@ body {
   margin: 2.5rem 0;
 }
 .prose table {
+  /* display:block + overflow makes wide tables scroll inside their own box
+     instead of forcing the whole page to scroll sideways on mobile. */
+  display: block;
   width: 100%;
+  overflow-x: auto;
   border-collapse: collapse;
   font-size: 0.9rem;
 }
