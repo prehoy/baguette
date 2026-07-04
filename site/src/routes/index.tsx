@@ -88,7 +88,7 @@ const pipeline = [
 
 export default component$(() => {
   return (
-    <main class="relative min-h-screen bg-paper text-ink">
+    <main class="relative min-h-screen overflow-x-clip bg-paper text-ink">
       {/* Brutalist frame border */}
       <div class="pointer-events-none absolute inset-3 border-2 border-ink/15 sm:inset-5 md:inset-8" />
 
@@ -96,8 +96,8 @@ export default component$(() => {
         <SiteHeader />
 
         {/* ---------------- HERO ---------------- */}
-        <section class="grid flex-1 items-center gap-14 py-16 md:py-24 lg:grid-cols-[1.05fr_0.95fr] lg:gap-12">
-          <div>
+        <section class="grid min-w-0 flex-1 items-center gap-14 py-16 [&>*]:min-w-0 md:py-24 lg:grid-cols-[1.05fr_0.95fr] lg:gap-12">
+          <div class="min-w-0">
             <div class="animate-fade-up flex items-center gap-3">
               <span class="h-px w-8 bg-crust" />
               <span class="font-mono text-[11px] uppercase tracking-[0.28em] text-crust-deep">
@@ -105,7 +105,7 @@ export default component$(() => {
               </span>
             </div>
 
-            <h1 class="animate-fade-up delay-100 mt-6 font-display text-[clamp(2.7rem,7vw,5.2rem)] uppercase leading-[0.9] tracking-[0.005em]">
+            <h1 class="animate-fade-up delay-100 mt-6 font-display text-[clamp(2.15rem,7vw,5.2rem)] uppercase leading-[0.95] tracking-[0.005em]">
               Blazingly fast.
               <br />
               Zero-config.
@@ -160,7 +160,7 @@ export default component$(() => {
 
         {/* ---------------- EXPLAINER: one file -> endpoint ---------------- */}
         <section class="border-t-2 border-ink py-16 md:py-24">
-          <div class="grid gap-12 lg:grid-cols-[0.85fr_1.15fr] lg:gap-16">
+          <div class="grid gap-12 [&>*]:min-w-0 lg:grid-cols-[0.85fr_1.15fr] lg:gap-16">
             <div>
               <span class="font-mono text-[11px] uppercase tracking-[0.28em] text-ink/40">
                 The whole idea
@@ -234,7 +234,7 @@ export default component$(() => {
 
         {/* ---------------- AI CAN'T MESS IT UP ---------------- */}
         <section class="border-t-2 border-ink py-16 md:py-24">
-          <div class="grid gap-12 lg:grid-cols-[1.1fr_0.9fr] lg:gap-16">
+          <div class="grid gap-12 [&>*]:min-w-0 lg:grid-cols-[1.1fr_0.9fr] lg:gap-16">
             <div>
               <div class="flex items-center gap-3">
                 <span class="h-px w-8 bg-crust" />
