@@ -1,0 +1,8 @@
+node_modules
+dist
+lib
+lib-types
+server
+.env
+*.local
+bun.lock
