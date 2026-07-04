@@ -32,6 +32,18 @@ You never write the URL. It is derived from the file's location under `api/`:
 
 A `[segment]` in a filename becomes an OpenAPI `{segment}` path parameter — declare it in `request.params` with a matching key.
 
+### Same path, multiple methods
+
+One file is one route, so to put a GET list and a POST create on the **same** REST path, add a `.<method>` suffix to the filename. The suffix is stripped from the URL; the actual method still comes from each file's `defineRoute({ method })`.
+
+| File | Route |
+| --- | --- |
+| `api/widgets/index.get.ts` | `GET /api/widgets` |
+| `api/widgets/index.post.ts` | `POST /api/widgets` |
+| `api/widgets/[id].delete.ts` | `DELETE /api/widgets/{id}` |
+
+Without a suffix, give each route its own filename (`widgets/list.ts`, `widgets/create.ts`) — both styles work; the suffix is only for sharing one path.
+
 ## The route object
 
 ### `method`
