@@ -29,11 +29,13 @@ OpenAPI spec, and an error funnel. The path comes from the file's location.
 - **File-based routing** — `api/customers/[id].ts` → `/api/customers/{id}`.
 - **Auto docs** — Scalar UI at `/api/docs`, spec at `/api/doc`.
 - **ORM-agnostic** — bring Prisma, Drizzle, or raw SQL.
-- **Optional cron & automations** — `cron/` and `automations/` dirs, opt-in.
-- **AI-proof** — one-way conventions + a shipped [clean-code contract](./AGENTS.md) + a CI checker.
+- **Secure by default** — declarative per-route `auth`, rate limiting, security headers, a CORS footgun guard, and body limits.
+- **Production-ready** — `onBoot`/`onShutdown` + graceful SIGTERM, static/SPA serving, typed `defineEnv`.
+- **Optional cron & automations** — `cron/` (memory/Postgres/Redis/SQLite locks) and `automations/` (LISTEN/NOTIFY), opt-in.
+- **AI-proof** — one-way conventions + a shipped [clean-code contract](./AGENTS.md) + a CI checker + an [llms.txt](https://usebaguette.com/llms.txt).
 
 ## Status
-Early. HTTP core is working (`bun test`). See [PLAN.md](./PLAN.md).
+Published on [npm](https://www.npmjs.com/package/@prehoy/baguette) (`bun add @prehoy/baguette`) and running in production. Docs at [usebaguette.com](https://usebaguette.com). See [PLAN.md](./PLAN.md).
 
 ## Dev
 ```

@@ -55,6 +55,23 @@ Per-backend URL overrides exist if the lock store differs from your app's main o
 
 > **Note on `sqlite`:** the lock lives in one file, so it coordinates only processes that share it — a single node or a shared volume, **not** separate machines. For true cross-replica locking use `postgres` or `redis`.
 
+## Running a job on demand
+
+`startCron()` returns a controller so you can fire a job outside its schedule — e.g. run a sync right after a user action. To get the handle, turn off serve's auto-wiring and start cron yourself (otherwise the jobs schedule twice):
+
+```ts
+import { serve } from "@prehoy/baguette";
+import { startCron } from "@prehoy/baguette/cron";
+
+serve({ routesDir: "./api", cron: false }); // don't auto-wire
+export const cron = await startCron({ dir: "./cron" });
+
+// ...later, from a route:
+await cron.trigger("syncReviews"); // runs that job now, respecting the lock
+```
+
+`cron.jobs` lists the loaded job names.
+
 ## Scaffold one
 
 ```bash
