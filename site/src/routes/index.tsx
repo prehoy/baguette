@@ -49,16 +49,26 @@ const features = [
   },
   {
     n: "04",
+    title: "Secure by default",
+    body: "Declarative per-route auth, built-in rate limiting (brute-force + email-bomb protection), security headers, a CORS footgun guard, and body limits — one flag each.",
+  },
+  {
+    n: "05",
+    title: "Production-ready",
+    body: "onBoot and onShutdown hooks with graceful SIGTERM draining, static/SPA serving, and a typed defineEnv that replaces your hand-written env.ts.",
+  },
+  {
+    n: "06",
     title: "ORM-agnostic",
     body: "The framework imports no ORM. Bring Prisma, Drizzle, or raw SQL. Nothing in the hot path you didn't put there.",
   },
   {
-    n: "05",
+    n: "07",
     title: "Optional cron & automations",
-    body: "Drop a file in cron/ for scheduled jobs (Postgres advisory lock) or automations/ for LISTEN/NOTIFY event handlers. Off until the directory exists.",
+    body: "Drop a file in cron/ for scheduled jobs (memory / Postgres / Redis / SQLite locks) or automations/ for LISTEN/NOTIFY event handlers. Off until the directory exists.",
   },
   {
-    n: "06",
+    n: "08",
     title: "AI-proof by convention",
     body: "One obvious way to do each thing, enforced. A shipped clean-code contract, a baguette/eslint preset, and baguette check keep the codebase boring and typed.",
   },
@@ -193,7 +203,7 @@ export default component$(() => {
               Everything, by convention.
             </h2>
             <span class="font-mono text-[11px] uppercase tracking-[0.28em] text-ink/40">
-              Six moving parts
+              Eight moving parts
             </span>
           </div>
 

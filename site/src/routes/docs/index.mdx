@@ -87,7 +87,7 @@ Each layer is independently optional. If a directory doesn't exist, its code is 
 
 ## Next steps
 
-- [defineRoute](/docs/define-route/) — the full route contract: params, query, body, multi-status responses, tags.
-- [serve](/docs/serve/) — configuring the server and auto-wiring the optional layers.
+- [defineRoute](/docs/define-route/) — the full route contract: params, query, body, multi-status responses, tags, plus declarative **`auth`** and **`rateLimit`** (brute-force + email-bomb protection, built in).
+- [serve](/docs/serve/) — configuring the server: security headers, the CORS credentials recipe, body limits, SPA serving, `onBoot`/`onShutdown`, typed `defineEnv`, and auto-wiring the optional layers.
 - [CLI](/docs/cli/) — scaffold routes, cron, and automations with `baguette new`.
 - [Clean-code contract](/docs/clean-code-contract/) — the conventions that keep an AI (or a human) from making a mess.
