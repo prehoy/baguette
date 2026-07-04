@@ -5,6 +5,7 @@ import { z } from "@hono/zod-openapi";
 export const ErrorSchema = z
   .object({
     error: z.string(),
-    message: z.any(),
+    // Correlate with the server logs; no internal detail is returned to clients.
+    process_id: z.string().optional(),
   })
   .openapi("Error");

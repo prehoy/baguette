@@ -1,6 +1,6 @@
 {
   "name": "@prehoy/baguette",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Blazingly fast, zero-config Bun + Hono API framework. Drop a file, get a typed, documented, validated endpoint.",
   "license": "MIT",
   "homepage": "https://usebaguette.com",

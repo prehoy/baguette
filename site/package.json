@@ -7,8 +7,9 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "gen.llms": "node scripts/gen-llms.mjs",
     "build": "qwik build",
-    "build.client": "vite build",
+    "build.client": "node scripts/gen-llms.mjs && vite build",
     "build.preview": "vite build --ssr src/entry.preview.tsx",
     "build.server": "vite build -c adapters/static/vite.config.ts",
     "build.types": "tsc --incremental --noEmit",

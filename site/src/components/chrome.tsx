@@ -101,6 +101,12 @@ export const SiteFooter = component$(() => (
           >
             Clean-code contract
           </Link>
+          <a
+            href="/llms.txt"
+            class="text-sm text-ink/60 transition-colors hover:text-ink"
+          >
+            llms.txt <span class="text-ink/35">(for AI)</span>
+          </a>
         </div>
         <div class="flex flex-col gap-2.5">
           <span class="mb-1 text-[10px] uppercase tracking-[0.25em] text-ink/35">
