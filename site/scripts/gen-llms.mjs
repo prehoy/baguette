@@ -1,12 +1,11 @@
 // Generate /llms.txt (index) and /llms-full.txt (all docs concatenated) from the
 // real MDX sources so the AI-facing docs never drift from the site. Plain Node
 // (the Docker build has no Bun). Runs before every build; output lands in public/.
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const siteRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
-const repoRoot = join(siteRoot, "..");
 const BASE = "https://usebaguette.com";
 
 const pages = [
@@ -37,15 +36,15 @@ const TAGLINE =
 
 let full = `# baguette — full documentation\n\n> ${TAGLINE}\n`;
 const index = [];
+// Only the doc pages — they're always in the build context and cover the whole
+// framework (install lives in the header; the clean-code contract is its own page).
+// The repo-root README/AGENTS are NOT appended: they're outside the site/ Docker
+// build context, so appending them would produce different output locally vs in prod.
 for (const p of pages) {
   const md = stripFrontmatter(readFileSync(join(siteRoot, p.file), "utf8")); // md keeps its own H1
   full += `\n\n---\n\n${md}\n`;
   const url = `${BASE}/docs/${p.slug ? p.slug + "/" : ""}`;
   index.push(`- [${p.title}](${url}): ${firstPara(md).slice(0, 140)}`);
-}
-for (const file of ["README.md", "AGENTS.md"]) {
-  const fp = join(repoRoot, file);
-  if (existsSync(fp)) full += `\n\n---\n\n${readFileSync(fp, "utf8").trim()}\n`;
 }
 writeFileSync(join(siteRoot, "public/llms-full.txt"), full);
 
