@@ -162,8 +162,16 @@ function isZodSchema(x: unknown): x is z.ZodType {
 }
 
 // disk path (relative to routesDir) -> URL path. `index` collapses, `[id]` -> `{id}`.
+// An optional trailing `.<method>` (e.g. `index.post.ts`, `[id].delete.ts`) is
+// stripped, so several files can share one path with different HTTP methods —
+// the method still comes from each file's defineRoute. This is the only way to
+// put GET-list and POST-create on the same REST path under file-based routing.
 function derivePath(rel: string, base: string): string {
-  let p = rel.replace(/\.ts$/, "").replace(/\/index$/, "").replace(/^index$/, "");
+  let p = rel
+    .replace(/\.ts$/, "")
+    .replace(/\.(get|post|put|patch|delete|options)$/i, "")
+    .replace(/\/index$/, "")
+    .replace(/^index$/, "");
   p = p.replaceAll("[", "{").replaceAll("]", "}");
   const full = `${base}/${p}`.replace(/\/+/g, "/").replace(/\/$/, "");
   return full || base;
