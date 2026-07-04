@@ -1,0 +1,88 @@
+---
+title: CLI — baguette
+---
+
+# CLI
+
+The `baguette` CLI does two jobs: it scaffolds new files in the right place with the right shape (`baguette new`), and it enforces the [clean-code contract](/docs/clean-code-contract/) in CI (`baguette check`). Between them, there is one obvious way to add code and a hard gate that keeps it clean.
+
+## baguette new
+
+Scaffold structure instead of freehanding it. `new` writes a file at the conventional location with the correct boilerplate, so routes, cron jobs, and automations always start consistent.
+
+```bash
+baguette new route <path>
+baguette new cron <name>
+baguette new automation <name>
+```
+
+### Routes
+
+```bash
+baguette new route customers/create
+```
+
+Creates `api/customers/create.ts` with a `defineRoute` skeleton mounted at `/api/customers/create`. The path argument mirrors the URL, and dynamic segments use bracket syntax:
+
+```bash
+baguette new route customers/[id]
+# -> api/customers/[id].ts  ->  /api/customers/{id}
+```
+
+### Cron
+
+```bash
+baguette new cron sendReminders
+# -> cron/sendReminders.ts
+```
+
+Scaffolds a [`defineCron`](/docs/cron/) job with a schedule placeholder.
+
+### Automations
+
+```bash
+baguette new automation onPaymentPaid
+# -> automations/onPaymentPaid.ts
+```
+
+Scaffolds a [`defineAutomation`](/docs/automations/) handler wired to an event channel.
+
+## baguette check
+
+`baguette check` verifies your app against the clean-code contract and exits non-zero on a violation. Wire it into CI so code that breaks the conventions can't merge.
+
+```bash
+baguette check
+```
+
+```text
+$ baguette check
+
+  api/customers/create.ts
+    warn  hardcoded path — derive it from the file location
+    warn  manual c.req.json() — declare a request.body schema
+
+  api/legacy/proxy.ts
+    error  'as any' in app code — the framework is missing a type
+
+  2 warnings · 1 error · 14 routes clean
+```
+
+It flags the same patterns the [`baguette/eslint`](/docs/clean-code-contract/) preset does — hardcoded paths, manual body reads, `as any` / `as never` in app code, `console.log` in handlers, and more — so a human review and an automated review reach the same verdict.
+
+## Typical workflow
+
+```bash
+# scaffold
+baguette new route orders/[id]
+
+# ...write the schemas and handler...
+
+# verify before you commit
+baguette check
+```
+
+## Related
+
+- [Clean-code contract](/docs/clean-code-contract/) — the exact rules `check` enforces.
+- [defineRoute](/docs/define-route/) — what `new route` scaffolds.

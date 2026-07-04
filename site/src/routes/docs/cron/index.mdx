@@ -1,0 +1,39 @@
+---
+title: Cron — baguette
+---
+
+# Cron
+
+Cron is an optional layer for scheduled jobs. Drop a file in `cron/`, and `serve()` starts it automatically — no `cron/` directory means the code is never imported. Each run is guarded by a **Postgres advisory lock**, so with several instances running the same schedule, a given tick fires exactly once.
+
+```ts
+// cron/sendReminders.ts
+import { defineCron } from "baguette";
+
+export default defineCron({
+  schedule: "0 9 * * *", // every day at 09:00
+  handler: async () => {
+    await sendDueReminders();
+  },
+});
+```
+
+## How it works
+
+- **File-based** — one job per file in `cron/`, mounted by convention.
+- **Advisory lock** — before running, a job acquires a Postgres advisory lock keyed to its name. Only one instance across your fleet wins the tick; the rest skip it. No duplicate sends, no external scheduler.
+- **Opt-in** — the layer is off until the `cron/` directory exists. The framework imports no scheduler otherwise.
+- **Raw SQL only** — the lock uses raw SQL; cron pulls in no ORM.
+
+## Scaffold one
+
+```bash
+baguette new cron sendReminders
+```
+
+This creates `cron/sendReminders.ts` with the boilerplate in place. See the [CLI](/docs/cli/) reference.
+
+## Related
+
+- [serve](/docs/serve/) — auto-wires `cron/` when the directory is present.
+- [Automations](/docs/automations/) — the event-driven sibling of cron.

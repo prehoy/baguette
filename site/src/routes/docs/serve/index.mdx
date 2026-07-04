@@ -1,0 +1,54 @@
+---
+title: serve — baguette
+---
+
+# serve
+
+`serve()` is the entire wiring step. Point it at your routes directory; it imports every route in parallel, mounts each at the path its file location implies, wires up the OpenAPI docs, and starts a Bun server.
+
+```ts
+// server.ts
+import { serve } from "baguette";
+
+serve({ routesDir: "./api" });
+// routes loaded · validation on · docs at /api/docs
+```
+
+```bash
+bun run server.ts
+```
+
+## What serve does
+
+- **Loads routes in parallel** at boot — route files are imported concurrently, not one by one.
+- **Mounts by convention** — each `defineRoute` lands at the path derived from its file location.
+- **Serves the docs** — a Scalar UI at `/api/docs` and the raw OpenAPI spec at `/api/doc`.
+- **Installs the error funnel** — unhandled throws become a clean `500`.
+- **Enables `reusePort`** — so you can run multiple instances behind the same port.
+- **Logs requests** — a basic request log that never stringifies the body.
+
+## Auto-wiring the optional layers
+
+`serve()` wires the optional layers by convention — a directory existing is the on switch. Nothing is imported if its directory is absent:
+
+- If `cron/` exists, [scheduled jobs](/docs/cron/) start.
+- If `automations/` exists **and** `AUTOMATIONS=true`, [event handlers](/docs/automations/) start.
+
+This keeps a plain HTTP app free of any Postgres or scheduling code it never asked for.
+
+## Environment
+
+Validate environment variables once at boot rather than reading `Bun.env.X` in scattered places:
+
+```ts
+import { validateEnv } from "baguette";
+
+const tEnv = validateEnv(["DATABASE_URL", "PORT"]);
+```
+
+You get one typed `tEnv` object; a missing variable fails fast at startup instead of at 3am.
+
+## Related
+
+- [Getting started](/docs/) — the full install-to-running walkthrough.
+- [Cron](/docs/cron/) and [Automations](/docs/automations/) — the optional layers serve auto-wires.

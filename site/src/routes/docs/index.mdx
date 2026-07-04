@@ -1,0 +1,93 @@
+---
+title: Getting started — baguette
+---
+
+# Getting started
+
+**baguette** is a blazingly fast, zero-config API framework for [Bun](https://bun.sh) and [Hono](https://hono.dev). You drop a file into a directory and get back a fully typed, validated, and documented HTTP endpoint. One [zod](https://zod.dev) declaration is the single source of truth for runtime validation, TypeScript types, the OpenAPI spec, and the error funnel.
+
+This page takes you from an empty directory to a running, documented, type-safe route in about 60 seconds.
+
+## Install
+
+```bash
+bun add baguette
+```
+
+baguette re-exports `z` and `createRoute` so your app shares the exact zod version the framework validates with. Never install zod separately.
+
+## Your first typed route in 60 seconds
+
+### 1. Create a route
+
+The file's location _is_ the URL. Create `api/hello.ts`:
+
+```ts
+// api/hello.ts  ->  GET /api/hello
+import { defineRoute, z } from "baguette";
+
+export default defineRoute({
+  method: "get",
+  request: { query: z.object({ name: z.string().default("world") }) },
+  response: z.object({ greeting: z.string() }),
+  handler: (c, { query }) => c.json({ greeting: `Hello, ${query.name}!` }),
+});
+```
+
+`query` arrives already validated and typed as `{ name: string }`. There is no manual parsing, and no way to read an unvalidated value by accident.
+
+### 2. Start the server
+
+Point `serve()` at your routes directory. Create `server.ts`:
+
+```ts
+// server.ts
+import { serve } from "baguette";
+
+serve({ routesDir: "./api" });
+```
+
+```bash
+bun run server.ts
+```
+
+Routes are imported in parallel at boot and mounted by convention. Nothing to register.
+
+### 3. Call it
+
+```bash
+curl 'http://localhost:3000/api/hello?name=Ada'
+# { "greeting": "Hello, Ada!" }
+
+curl 'http://localhost:3000/api/hello?name='
+# 400 — validation failed, before your handler ever ran
+```
+
+### 4. Read the docs it wrote for itself
+
+Open **`http://localhost:3000/api/docs`** for a live [Scalar](https://scalar.com) UI, or **`/api/doc`** for the raw OpenAPI spec. Both are generated from your zod schemas — there is nothing to hand-maintain and nothing to keep in sync.
+
+## What you get from that one declaration
+
+- **Runtime validation** — invalid `params`, `query`, or `body` return `400` before your handler runs.
+- **Inferred types** — the handler's second argument is typed from your schemas. No casts.
+- **OpenAPI + Scalar docs** — served automatically at `/api/docs` and `/api/doc`.
+- **Error funnel** — an unhandled throw becomes a clean `500` in one predictable place.
+
+## Where things live
+
+baguette apps follow one directory layout:
+
+- `api/` — HTTP routes. One `defineRoute` per file.
+- `cron/` — optional scheduled jobs.
+- `automations/` — optional event-driven jobs.
+- `methods/` (or `lib/`) — shared helpers and business logic.
+
+Each layer is independently optional. If a directory doesn't exist, its code is never imported.
+
+## Next steps
+
+- [defineRoute](/docs/define-route/) — the full route contract: params, query, body, multi-status responses, tags.
+- [serve](/docs/serve/) — configuring the server and auto-wiring the optional layers.
+- [CLI](/docs/cli/) — scaffold routes, cron, and automations with `baguette new`.
+- [Clean-code contract](/docs/clean-code-contract/) — the conventions that keep an AI (or a human) from making a mess.

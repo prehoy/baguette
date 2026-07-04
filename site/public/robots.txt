@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://usebaguette.com/sitemap.xml

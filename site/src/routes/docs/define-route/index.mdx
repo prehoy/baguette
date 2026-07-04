@@ -1,0 +1,121 @@
+---
+title: defineRoute — baguette
+---
+
+# defineRoute
+
+`defineRoute` declares exactly one endpoint. It is the heart of baguette: a single object whose zod schemas become runtime validation, inferred handler types, the OpenAPI spec, and the error funnel — all at once. Every file in `api/` default-exports one call to it.
+
+```ts
+// api/customers/[id].ts  ->  GET /api/customers/{id}
+import { defineRoute, z } from "baguette";
+
+export default defineRoute({
+  method: "get",
+  summary: "Get a customer",
+  tags: ["Customers"],
+  request: { params: z.object({ id: z.string() }) },
+  response: z.object({ id: z.string(), name: z.string() }),
+  handler: (c, { params }) => c.json({ id: params.id, name: "Ada" }),
+});
+```
+
+## The path comes from the file
+
+You never write the URL. It is derived from the file's location under `api/`:
+
+| File | Route |
+| --- | --- |
+| `api/hello.ts` | `GET /api/hello` |
+| `api/customers/[id].ts` | `/api/customers/{id}` |
+| `api/orders/[id]/items.ts` | `/api/orders/{id}/items` |
+
+A `[segment]` in a filename becomes an OpenAPI `{segment}` path parameter — declare it in `request.params` with a matching key.
+
+## The route object
+
+### `method`
+
+One of `"get"`, `"post"`, `"put"`, `"patch"`, `"delete"`. One method per file.
+
+### `request`
+
+Up to three zod schemas, each optional:
+
+- `params` — path parameters. Keys must match the `[segment]`s in the filename.
+- `query` — the query string. Coercion and defaults work as normal zod.
+- `body` — the JSON body. It is parsed lazily, straight through the schema — there is no parse-everything middleware and the body is never read manually.
+
+```ts
+request: {
+  params: z.object({ id: z.string() }),
+  query: z.object({ expand: z.boolean().default(false) }),
+  body: z.object({ items: z.array(ItemSchema) }),
+}
+```
+
+Whatever you declare arrives on the handler's second argument, validated and fully typed. Anything that fails validation returns `400` before your handler runs.
+
+### `response`
+
+A single zod schema is the `200` body:
+
+```ts
+response: OrderSchema,
+```
+
+Or map status codes to schemas when an endpoint has more than one shape:
+
+```ts
+response: {
+  200: OrderSchema,
+  404: z.object({ error: z.string() }),
+},
+```
+
+The response schema feeds the OpenAPI spec so the generated docs describe exactly what a caller receives.
+
+### `handler`
+
+```ts
+handler: (c, input) => c.json(/* ... */)
+```
+
+- `c` is the Hono [`Context`](https://hono.dev/docs/api/context) — use `c.json`, `c.req.header`, and so on.
+- `input` is `{ params, query, body }`, containing only the schemas you declared, fully typed.
+
+Handlers may be `async`. An unhandled throw is caught by the error funnel and returned as a clean `500`, so you only handle the errors you care about.
+
+```ts
+handler: async (c, { params, body }) => {
+  const order = await createOrder(params.id, body);
+  return c.json(order);
+}
+```
+
+### `summary` & `tags`
+
+Optional OpenAPI metadata. `summary` titles the operation; `tags` group it in the Scalar sidebar.
+
+## The one escape hatch
+
+For a genuinely schema-less endpoint — most often a third-party webhook that must accept any payload — default-export a plain Hono handler instead of a `defineRoute`. The loader mounts it with `app.all`:
+
+```ts
+// api/webhooks/incoming.ts
+import type { Context } from "hono";
+
+// Blessed exception to "all I/O through zod": an external webhook.
+export default async function incomingWebhook(c: Context) {
+  const body = await c.req.json().catch(() => null);
+  return c.json({ received: true });
+}
+```
+
+This is the _only_ sanctioned way to skip schemas, and it is lint-flagged so it stays rare. Everything else goes through zod.
+
+## Related
+
+- [serve](/docs/serve/) — load a directory of routes and start the server.
+- [CLI](/docs/cli/) — `baguette new route <path>` scaffolds a route in the right place.
+- [Clean-code contract](/docs/clean-code-contract/) — the rules `defineRoute` is built to enforce.

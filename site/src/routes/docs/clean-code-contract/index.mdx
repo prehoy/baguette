@@ -1,0 +1,54 @@
+---
+title: Clean-code contract — baguette
+---
+
+# Clean-code contract
+
+Rules for any human or AI writing code in a baguette app. They are enforced by the [`baguette/eslint`](/docs/cli/) preset and [`baguette check`](/docs/cli/) — code that breaks them fails CI. The goal is a codebase that stays **boring, one-way, and typed**: there is one obvious way to do each thing, so generated code can't drift into a mess.
+
+This page mirrors the `AGENTS.md` contract that ships in every baguette app. Point your agent at it.
+
+## Routes
+
+- **One route per file.** Each file in `api/` default-exports exactly one `defineRoute`.
+- **Path comes from the file location.** `api/customers/[id].ts` → `/api/customers/{id}`. Never hardcode it.
+- **All I/O goes through zod.** Declare `request.params` / `query` / `body` and `response` as zod schemas. The handler receives validated, typed input — no manual parsing.
+- **No `app.all` / raw handlers** except a genuinely schema-less endpoint (for example, a third-party webhook that must accept any payload). Those are lint-flagged; justify them with a comment.
+
+## Banned patterns
+
+- **`as never`, `as any` in app code.** If you need one, the framework is missing a type — fix it there, not here. (Framework internals may cast at the boundary, with a comment.)
+- **`c.req.json<T>()` / manual body reads.** Use the `body` schema.
+- **`console.log` in handlers or business code.** Use the exported `logger`.
+- **New dependencies for what a few lines do.** Follow the ladder: stdlib → platform → existing dep → a few lines → only then a new dep.
+
+## Structure
+
+- HTTP routes → `api/`. Scheduled jobs → `cron/`. Event-driven jobs → `automations/`. Nothing scheduled or triggered inline in a route.
+- Shared helpers → `methods/` (or `lib/`). No business logic in the framework glue.
+- Env: validate at boot with `validateEnv([...])` and build one typed `tEnv` object. No scattered `Bun.env.X` reads.
+
+## Scaffolding
+
+Use the CLI instead of freehanding structure:
+
+```bash
+baguette new route customers/create
+baguette new cron sendReminders
+baguette new automation onPaymentPaid
+```
+
+## The principle
+
+One obvious way to do each thing. If you're inventing structure, stop — there's already a convention. **Boring, typed, and deletable beats clever every time.**
+
+## Why this is the moat
+
+Generated code drifts because most frameworks offer a hundred ways to do everything. baguette offers one, and turns it into machinery:
+
+- a shipped `AGENTS.md` contract (this page) that an agent reads before writing code;
+- a `baguette/eslint` preset that flags every rule above in the editor;
+- `baguette check` in CI, which exits non-zero on a violation;
+- `baguette new` scaffolding, so structure is generated correctly, not guessed.
+
+The result: an AI physically can't merge the mess, because the mess doesn't pass. See the [CLI](/docs/cli/) for how to wire the checker in.

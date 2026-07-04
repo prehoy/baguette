@@ -1,0 +1,39 @@
+---
+title: Automations — baguette
+---
+
+# Automations
+
+Automations are an optional, event-driven layer built on **Postgres LISTEN/NOTIFY**. Instead of running on a clock like [cron](/docs/cron/), an automation reacts to something happening in your database. Drop a file in `automations/`, and it wires itself up.
+
+```ts
+// automations/onPaymentPaid.ts
+import { defineAutomation } from "baguette";
+
+export default defineAutomation({
+  on: "payment.paid",
+  handler: async (event) => {
+    await grantAccess(event.customerId);
+  },
+});
+```
+
+## How it works
+
+- **File-based** — one automation per file in `automations/`, mounted by convention.
+- **LISTEN/NOTIFY** — automations subscribe to Postgres notification channels. The framework can install the trigger DDL so a row change emits an event.
+- **Double opt-in** — this layer starts only when the `automations/` directory exists **and** `AUTOMATIONS=true`. It stays dormant otherwise, so a plain HTTP deploy never opens a listener.
+- **Raw SQL only** — LISTEN/NOTIFY and trigger DDL use raw SQL; no ORM is imported.
+
+## Scaffold one
+
+```bash
+baguette new automation onPaymentPaid
+```
+
+This creates `automations/onPaymentPaid.ts` ready to fill in. See the [CLI](/docs/cli/) reference.
+
+## Related
+
+- [serve](/docs/serve/) — gates automations behind `AUTOMATIONS=true`.
+- [Cron](/docs/cron/) — for time-based rather than event-based jobs.
