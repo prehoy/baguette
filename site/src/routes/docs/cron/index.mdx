@@ -7,15 +7,15 @@ title: Cron — baguette
 Cron is an optional layer for scheduled jobs. Drop a file in `cron/`, and `serve()` starts it automatically — no `cron/` directory means the code is never imported. Each run is guarded by a **Postgres advisory lock**, so with several instances running the same schedule, a given tick fires exactly once.
 
 ```ts
-// cron/sendReminders.ts
-import { defineCron } from "baguette";
+// cron/sendReminders.ts — a job is two named exports: details + process
+export const details = {
+  name: "sendReminders",
+  cron: { value: "0 9 * * *" }, // every day at 09:00
+};
 
-export default defineCron({
-  schedule: "0 9 * * *", // every day at 09:00
-  handler: async () => {
-    await sendDueReminders();
-  },
-});
+export const process = async () => {
+  await sendDueReminders();
+};
 ```
 
 ## How it works

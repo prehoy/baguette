@@ -11,7 +11,7 @@ This page takes you from an empty directory to a running, documented, type-safe 
 ## Install
 
 ```bash
-bun add baguette
+bun add @prehoy/baguette
 ```
 
 baguette re-exports `z` and `createRoute` so your app shares the exact zod version the framework validates with. Never install zod separately.
@@ -24,7 +24,7 @@ The file's location _is_ the URL. Create `api/hello.ts`:
 
 ```ts
 // api/hello.ts  ->  GET /api/hello
-import { defineRoute, z } from "baguette";
+import { defineRoute, z } from "@prehoy/baguette";
 
 export default defineRoute({
   method: "get",
@@ -42,7 +42,7 @@ Point `serve()` at your routes directory. Create `server.ts`:
 
 ```ts
 // server.ts
-import { serve } from "baguette";
+import { serve } from "@prehoy/baguette";
 
 serve({ routesDir: "./api" });
 ```

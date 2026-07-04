@@ -7,15 +7,18 @@ title: Automations — baguette
 Automations are an optional, event-driven layer built on **Postgres LISTEN/NOTIFY**. Instead of running on a clock like [cron](/docs/cron/), an automation reacts to something happening in your database. Drop a file in `automations/`, and it wires itself up.
 
 ```ts
-// automations/onPaymentPaid.ts
-import { defineAutomation } from "baguette";
+// automations/onPaymentPaid.ts — two named exports: details + automation.
+// The trigger name is a Postgres channel: `<table>_insert | _update | _delete`.
+export const details = {
+  name: "onPaymentPaid",
+  trigger: { name: "payment_insert" }, // fires on a new row in the Payment table
+};
 
-export default defineAutomation({
-  on: "payment.paid",
-  handler: async (event) => {
-    await grantAccess(event.customerId);
-  },
-});
+export const automation = async (payload: string) => {
+  const payment = JSON.parse(payload); // the changed row, as JSON
+  await grantAccess(payment.customerId);
+  return { logs: [], status: "SUCCESS" as const };
+};
 ```
 
 ## How it works

@@ -5,7 +5,7 @@ typed, documented, validated endpoint.
 
 ```ts
 // api/customers/[id].ts
-import { defineRoute, z } from "baguette";
+import { defineRoute, z } from "@prehoy/baguette";
 
 export default defineRoute({
   method: "get",
@@ -17,7 +17,7 @@ export default defineRoute({
 
 ```ts
 // server.ts
-import { serve } from "baguette";
+import { serve } from "@prehoy/baguette";
 serve({ routesDir: "./api" }); // routes loaded, docs at /api/docs
 ```
 

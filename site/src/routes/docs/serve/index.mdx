@@ -8,7 +8,7 @@ title: serve — baguette
 
 ```ts
 // server.ts
-import { serve } from "baguette";
+import { serve } from "@prehoy/baguette";
 
 serve({ routesDir: "./api" });
 // routes loaded · validation on · docs at /api/docs
@@ -41,7 +41,7 @@ This keeps a plain HTTP app free of any Postgres or scheduling code it never ask
 Validate environment variables once at boot rather than reading `Bun.env.X` in scattered places:
 
 ```ts
-import { validateEnv } from "baguette";
+import { validateEnv } from "@prehoy/baguette";
 
 const tEnv = validateEnv(["DATABASE_URL", "PORT"]);
 ```

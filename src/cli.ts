@@ -16,7 +16,7 @@ Usage:
   baguette --help
 `;
 
-const routeTpl = () => `import { defineRoute, z } from "baguette";
+const routeTpl = () => `import { defineRoute, z } from "@prehoy/baguette";
 
 export default defineRoute({
   method: "get",

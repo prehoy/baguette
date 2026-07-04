@@ -4,7 +4,7 @@ import { CodeBlock } from "~/components/code";
 import { SiteHeader, SiteFooter } from "~/components/chrome";
 
 const routeSample = `// api/customers/[id].ts
-import { defineRoute, z } from "baguette";
+import { defineRoute, z } from "@prehoy/baguette";
 
 export default defineRoute({
   method: "get",
@@ -15,7 +15,7 @@ export default defineRoute({
 });`;
 
 const serveSample = `// server.ts
-import { serve } from "baguette";
+import { serve } from "@prehoy/baguette";
 
 serve({ routesDir: "./api" });
 // routes loaded · validation on · docs at /api/docs`;
@@ -113,7 +113,7 @@ export default component$(() => {
                   $
                 </span>
                 <code class="flex items-center px-4 py-2.5 font-mono text-sm font-medium tracking-tight text-ink">
-                  bun add baguette
+                  bun add @prehoy/baguette
                 </code>
               </div>
               <Link
