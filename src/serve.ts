@@ -2,9 +2,14 @@ import { existsSync } from "node:fs";
 import path from "node:path";
 import { createApp, type AppOptions } from "./createApp";
 import logger from "./logger";
+import processError from "./processError";
 
 export interface ServeOptions extends AppOptions {
   port?: number;
+  /** Runs before the app is built + listens — migrations, seed, warmup. */
+  onBoot?: () => void | Promise<void>;
+  /** Runs on SIGTERM/SIGINT after the server stops accepting — close DB/cron. */
+  onShutdown?: () => void | Promise<void>;
   /** Cron: auto-on if ./cron exists. false to disable; {db} to set the lock DB. */
   cron?: boolean | { db?: string; dir?: string };
   /** Automations are opt-in (need the table list). Omit to leave them off. */
@@ -13,17 +18,17 @@ export interface ServeOptions extends AppOptions {
 
 /** Build the app and start listening. Returns the app for further wiring/tests. */
 export default async function serve(opts: ServeOptions = {}) {
+  await opts.onBoot?.(); // migrations / seed / warmup, before we accept traffic
+
   const app = await createApp(opts);
   const port = opts.port ?? (Number(Bun.env.PORT) || 3000);
-  Bun.serve({ port, fetch: app.fetch, reusePort: true });
+  const server = Bun.serve({ port, fetch: app.fetch, reusePort: true });
   logger.info({ message: `baguette listening on :${port}` });
 
   // Optional layers — dynamic-imported so HTTP-only apps never load them.
   const cronDir = (typeof opts.cron === "object" && opts.cron.dir) || "./cron";
   if (opts.cron !== false && existsSync(path.resolve(cronDir))) {
     const { startCron } = await import("./cron");
-    // Lock backend is chosen by CRON_LOCK env (default: memory / single-instance).
-    // Pass an explicit db only if the caller set one.
     await startCron({
       dir: cronDir,
       db: typeof opts.cron === "object" ? opts.cron.db : undefined,
@@ -33,6 +38,24 @@ export default async function serve(opts: ServeOptions = {}) {
     const { startAutomations } = await import("./automations");
     await startAutomations(opts.automations);
   }
+
+  // Graceful shutdown: stop accepting, run the hook, exit. Registered once.
+  let closing = false;
+  const shutdown = async (sig: string) => {
+    if (closing) return;
+    closing = true;
+    logger.info({ message: `${sig} received — draining` });
+    try {
+      server.stop();
+      await opts.onShutdown?.();
+    } catch (e) {
+      logger.error({ message: "Error during shutdown", error: processError(e) });
+    } finally {
+      process.exit(0);
+    }
+  };
+  process.on("SIGTERM", () => void shutdown("SIGTERM"));
+  process.on("SIGINT", () => void shutdown("SIGINT"));
 
   return app;
 }

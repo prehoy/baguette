@@ -3,14 +3,20 @@
 export { z, createRoute, OpenAPIHono } from "@hono/zod-openapi";
 
 export { defineRoute, isBaguetteRoute } from "./defineRoute";
-export type { Method, RouteConfig, RouteDescriptor } from "./defineRoute";
+export type {
+  Method,
+  RouteConfig,
+  RouteDescriptor,
+  AuthResolver,
+  BaguetteUser,
+} from "./defineRoute";
 export { createApp } from "./createApp";
-export type { AppOptions } from "./createApp";
+export type { AppOptions, CorsOption } from "./createApp";
 export { default as serve } from "./serve";
 export type { ServeOptions } from "./serve";
 export { loadRoutes } from "./loadRoutes";
 export { ErrorSchema } from "./errorSchema";
-export { validateEnv } from "./env";
+export { validateEnv, defineEnv } from "./env";
 
 export { default as logger } from "./logger";
 export { default as processError } from "./processError";

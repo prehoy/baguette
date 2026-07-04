@@ -165,16 +165,33 @@ export async function runCronJob(
   await (ctx.lock ? ctx.lock(name, run) : run());
 }
 
-export async function startCron(opts: CronOptions = {}): Promise<void> {
+export interface CronController {
+  /** Trigger a loaded job by name right now (e.g. from a route). Respects the lock. */
+  trigger: (name: string) => Promise<void>;
+  jobs: string[];
+}
+
+export async function startCron(opts: CronOptions = {}): Promise<CronController> {
   const dir = opts.dir ?? "./cron";
   // Precedence: explicit lock > explicit db (postgres) > CRON_LOCK env (default memory).
   const lock = opts.lock ?? (opts.db ? pgAdvisoryLock(opts.db) : lockFromEnv());
   logger.info({ message: `Cron lock backend: ${opts.lock ? "custom" : opts.db ? "postgres" : (Bun.env.CRON_LOCK ?? "memory")}` });
 
   const jobs = await loadCronJobs(dir);
+  const byName = new Map(jobs.map((j) => [j.details.name, j]));
+  const ctx = { lock, isEnabled: opts.isEnabled, onRun: opts.onRun };
   for (const job of jobs) {
-    new CronJob(job.details.cron.value, () => runCronJob(job, { lock, isEnabled: opts.isEnabled, onRun: opts.onRun }), null, true);
+    new CronJob(job.details.cron.value, () => runCronJob(job, ctx), null, true);
     logger.info({ message: `Scheduled cron ${job.details.name} (${job.details.cron.value})` });
   }
   logger.info({ message: `Started ${jobs.length} cron job(s)` });
+
+  return {
+    jobs: [...byName.keys()],
+    trigger: async (name) => {
+      const job = byName.get(name);
+      if (!job) throw new Error(`No cron job named "${name}"`);
+      await runCronJob(job, ctx);
+    },
+  };
 }

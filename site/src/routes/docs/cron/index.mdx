@@ -18,6 +18,8 @@ export const process = async () => {
 };
 ```
 
+> **Sub-minute schedules** need the 6-field (seconds-first) cron syntax — `"*/30 * * * * *"` is every 30 seconds. The standard 5-field form has a one-minute floor.
+
 ## How it works
 
 - **File-based** — one job per file in `cron/`, mounted by convention.

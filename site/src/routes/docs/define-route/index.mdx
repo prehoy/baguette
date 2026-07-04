@@ -97,6 +97,33 @@ handler: async (c, { params, body }) => {
 
 Optional OpenAPI metadata. `summary` titles the operation; `tags` group it in the Scalar sidebar.
 
+## Auth & middleware
+
+Declare auth on the route instead of calling `requireAuth(c)` by hand — forget it once on a mutation and you have an IDOR. `auth: true` runs the resolver you pass to `serve({ auth })`; a falsy result is a `401`, otherwise the user is on the context:
+
+```ts
+export default defineRoute({
+  method: "post",
+  auth: true,                    // resolver runs first; 401 if it returns no user
+  middleware: [rateLimit()],     // any Hono middleware, after auth
+  request: { body: z.object({ name: z.string() }) },
+  handler: (c, { body }) => {
+    const user = c.get("user");  // typed
+    return c.json({ ownerId: user.id, name: body.name });
+  },
+});
+```
+
+Type `c.get("user")` once by augmenting `BaguetteUser`:
+
+```ts
+declare module "@prehoy/baguette" {
+  interface BaguetteUser { id: string; orgId: string }
+}
+```
+
+A route with `auth: true` throws at boot if no resolver is configured — you can't ship an unprotected "protected" route by accident.
+
 ## The one escape hatch
 
 For a genuinely schema-less endpoint — most often a third-party webhook that must accept any payload — default-export a plain Hono handler instead of a `defineRoute`. The loader mounts it with `app.all`:

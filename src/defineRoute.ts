@@ -1,11 +1,28 @@
 import type { z } from "@hono/zod-openapi";
-import type { Context } from "hono";
+import type { Context, MiddlewareHandler } from "hono";
 
 export type Method = "get" | "post" | "put" | "delete" | "patch" | "options";
 
 const BAGUETTE = Symbol.for("baguette.route");
 
 type Obj = z.ZodObject<any>;
+
+/**
+ * The authenticated user shape. Apps augment this to type `c.get("user")`:
+ *
+ *   declare module "@prehoy/baguette" {
+ *     interface BaguetteUser { id: string; orgId: string }
+ *   }
+ */
+export interface BaguetteUser {}
+
+// Make c.get("user") / c.get("process_id") typed everywhere.
+declare module "hono" {
+  interface ContextVariableMap {
+    user: BaguetteUser;
+    process_id: string;
+  }
+}
 
 export interface RouteConfig<
   P extends Obj | undefined,
@@ -15,6 +32,14 @@ export interface RouteConfig<
   method: Method;
   summary?: string;
   tags?: string[];
+  /**
+   * Require authentication. The `auth` resolver configured in serve()/createApp()
+   * runs first; a falsy result short-circuits with 401, otherwise the user is set
+   * on the context (`c.get("user")`). Declarative — no per-handler requireAuth().
+   */
+  auth?: boolean;
+  /** Hono middleware to run before the handler (after auth). */
+  middleware?: MiddlewareHandler[];
   request?: { params?: P; query?: Q; body?: B };
   /** A single zod schema (200) or a `{ status: schema }` map. */
   response?: z.ZodType | Record<number, z.ZodType>;
@@ -48,3 +73,8 @@ export function defineRoute<
 export function isBaguetteRoute(x: any): x is RouteDescriptor {
   return !!x && x[BAGUETTE] === true;
 }
+
+/** Resolves the current user from the request; falsy result -> 401 on `auth` routes. */
+export type AuthResolver = (
+  c: Context,
+) => Promise<BaguetteUser | null | undefined> | BaguetteUser | null | undefined;

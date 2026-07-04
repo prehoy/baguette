@@ -8,6 +8,7 @@ codebase boring, one-way, and typed.
 - **One route per file.** Each file in `api/` default-exports exactly one `defineRoute`.
 - **Path comes from the file location.** `api/customers/[id].ts` → `/api/customers/{id}`. Never hardcode it.
 - **All I/O goes through zod.** Declare `request.params/query/body` and `response` as zod schemas. The handler receives validated, typed input — no manual parsing.
+- **Protect routes declaratively.** Use `auth: true` on the `defineRoute` (+ a resolver in `serve({ auth })`), never a hand-called `requireAuth(c)` inside the handler — one forgotten call is an IDOR/tenant leak.
 - **No `app.all` / raw handlers** except a genuinely schema-less endpoint (e.g. a third-party webhook that must accept any payload). Those are lint-flagged; justify with a comment.
 
 ## Banned patterns

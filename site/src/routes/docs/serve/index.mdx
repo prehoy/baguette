@@ -27,6 +27,34 @@ bun run server.ts
 - **Enables `reusePort`** — so you can run multiple instances behind the same port.
 - **Logs requests** — a basic request log that never stringifies the body.
 
+## Middleware, auth & production options
+
+`serve()` (and `createApp()`) take the options every real deployment needs — all off by default, one flag to turn on:
+
+| Option | What it does |
+| --- | --- |
+| `auth` | A resolver `(c) => user \| null`. Routes marked `auth: true` run it — `401` on falsy, else it sets `c.get("user")`. See [defineRoute](/docs/define-route/). |
+| `securityHeaders: true` | HSTS, X-Content-Type-Options, X-Frame-Options, Referrer-Policy, and more. |
+| `cors` | `true` → `origin:"*"`. For cookies/Bearer from a browser use `{ reflect: true, credentials: true }` — baguette **refuses** the invalid `origin:"*"` + `credentials` combo. |
+| `bodyLimit` | Max request body in bytes; larger → `413`. |
+| `spa` | Serve a static SPA (`spa: "./public"`) with an `index.html` deep-link fallback, mounted after the API. |
+| `onApp(app)` | Mount custom middleware/static on the Hono app before it listens. |
+| `onBoot()` | Run before the server accepts traffic — migrations, seed, warmup. |
+| `onShutdown()` | Run on SIGTERM/SIGINT after draining — close DB/cron. |
+
+```ts
+serve({
+  routesDir: "./api",
+  auth: async (c) => verifySession(c.req.header("authorization")),
+  securityHeaders: true,
+  cors: { reflect: true, credentials: true }, // browser + credentials, done right
+  bodyLimit: 1_000_000,
+  spa: "./public",
+  onBoot: () => migrate(),
+  onShutdown: () => db.end(),
+});
+```
+
 ## Auto-wiring the optional layers
 
 `serve()` wires the optional layers by convention — a directory existing is the on switch. Nothing is imported if its directory is absent:
@@ -38,15 +66,19 @@ This keeps a plain HTTP app free of any Postgres or scheduling code it never ask
 
 ## Environment
 
-Validate environment variables once at boot rather than reading `Bun.env.X` in scattered places:
+Validate **and type** the environment once at boot with `defineEnv` (a zod schema) instead of reading `Bun.env.X` in scattered places:
 
 ```ts
-import { validateEnv } from "@prehoy/baguette";
+import { defineEnv, z } from "@prehoy/baguette";
 
-const tEnv = validateEnv(["DATABASE_URL", "PORT"]);
+export const env = defineEnv(z.object({
+  PORT: z.coerce.number().default(3000),
+  DATABASE_URL: z.string().url(),
+}));
+// env.PORT is a number, env.DATABASE_URL a validated string — typed everywhere.
 ```
 
-You get one typed `tEnv` object; a missing variable fails fast at startup instead of at 3am.
+A missing or malformed variable fails fast at startup, listing every problem, instead of at 3am. (`validateEnv(["A", "B"])` remains for a plain required-keys check.)
 
 ## Related
 

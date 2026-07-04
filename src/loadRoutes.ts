@@ -1,7 +1,8 @@
 import { readdir, stat } from "node:fs/promises";
 import path from "node:path";
 import { createRoute, type OpenAPIHono, type z } from "@hono/zod-openapi";
-import { isBaguetteRoute, type RouteDescriptor } from "./defineRoute";
+import type { Context, MiddlewareHandler } from "hono";
+import { isBaguetteRoute, type AuthResolver, type RouteDescriptor } from "./defineRoute";
 import { ErrorSchema } from "./errorSchema";
 import routeHandler from "./routeHandler";
 import logger from "./logger";
@@ -13,7 +14,7 @@ import logger from "./logger";
  */
 export async function loadRoutes(
   app: OpenAPIHono,
-  opts: { routesDir: string; basePath?: string },
+  opts: { routesDir: string; basePath?: string; auth?: AuthResolver },
 ): Promise<string[]> {
   const dir = path.resolve(opts.routesDir);
   const base = opts.basePath ?? "/api";
@@ -37,7 +38,9 @@ export async function loadRoutes(
     const routePath = derivePath(entry.rel, base);
     const def = entry.mod.default;
     if (isBaguetteRoute(def)) {
-      mountRoute(app, routePath, def);
+      if (def.auth && !opts.auth)
+        throw new Error(`Route ${routePath} has auth:true but no auth resolver was configured (serve({ auth }))`);
+      mountRoute(app, routePath, def, opts.auth);
       mounted.push(`${def.method.toUpperCase()} ${routePath}`);
     } else if (typeof def === "function") {
       // Raw escape hatch (lint-flagged): schema-less handler, e.g. a webhook
@@ -51,7 +54,12 @@ export async function loadRoutes(
   return mounted;
 }
 
-function mountRoute(app: OpenAPIHono, routePath: string, def: RouteDescriptor) {
+function mountRoute(
+  app: OpenAPIHono,
+  routePath: string,
+  def: RouteDescriptor,
+  authResolver?: AuthResolver,
+) {
   const route = createRoute({
     method: def.method,
     path: routePath,
@@ -60,6 +68,19 @@ function mountRoute(app: OpenAPIHono, routePath: string, def: RouteDescriptor) {
     request: buildRequest(def.request),
     responses: buildResponses(def.response),
   });
+
+  // Declarative auth as a middleware: resolver runs, 401 short-circuits, else the
+  // user is set on the context. Kills the per-handler requireAuth() bug class.
+  const chain: MiddlewareHandler[] = [];
+  if (def.auth)
+    chain.push(async (c, next) => {
+      const user = await authResolver!(c);
+      if (!user) return c.json({ error: "Unauthorized" }, 401);
+      c.set("user", user);
+      await next();
+    });
+  if (def.middleware) chain.push(...def.middleware);
+
   // Cast at the framework boundary so app code never needs one: zod-openapi's
   // handler return type can't see through our routeHandler wrapper.
   app.openapi(route, (async (c: any) => {
@@ -68,8 +89,31 @@ function mountRoute(app: OpenAPIHono, routePath: string, def: RouteDescriptor) {
       query: def.request?.query ? c.req.valid("query") : undefined,
       body: def.request?.body ? c.req.valid("json") : undefined,
     };
-    return routeHandler({ name: routePath, c, handler: () => def.handler(c, input) });
+    const final = () => routeHandler({ name: routePath, c, handler: () => def.handler(c, input) });
+    return chain.length ? runChain(c, chain, final) : final();
   }) as any);
+}
+
+// Standard onion: run middleware in order. A middleware may short-circuit (return
+// its own Response, e.g. 401) or pass through via next(). We capture the Response
+// from whichever path produced it so it's never lost.
+async function runChain(
+  c: Context,
+  mws: MiddlewareHandler[],
+  final: () => Promise<unknown>,
+): Promise<unknown> {
+  const dispatch = async (i: number): Promise<unknown> => {
+    const mw = mws[i];
+    if (!mw) return final();
+    let downstream: unknown;
+    const ret = await mw(c, (async () => {
+      downstream = await dispatch(i + 1);
+    }) as any);
+    if (ret instanceof Response) return ret; // middleware short-circuited
+    if (downstream !== undefined) return downstream; // passed through next()
+    return c.res; // middleware finalized via c.res
+  };
+  return dispatch(0);
 }
 
 function buildRequest(req: RouteDescriptor["request"]) {
