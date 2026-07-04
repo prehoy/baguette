@@ -12,6 +12,8 @@ const pages = [
   { slug: "", title: "Getting started", file: "src/routes/docs/index.mdx" },
   { slug: "define-route", title: "defineRoute", file: "src/routes/docs/define-route/index.mdx" },
   { slug: "serve", title: "serve", file: "src/routes/docs/serve/index.mdx" },
+  { slug: "security", title: "Security", file: "src/routes/docs/security/index.mdx" },
+  { slug: "websockets", title: "WebSockets", file: "src/routes/docs/websockets/index.mdx" },
   { slug: "cron", title: "Cron", file: "src/routes/docs/cron/index.mdx" },
   { slug: "automations", title: "Automations", file: "src/routes/docs/automations/index.mdx" },
   { slug: "cli", title: "CLI", file: "src/routes/docs/cli/index.mdx" },

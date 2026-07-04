@@ -59,16 +59,21 @@ const features = [
   },
   {
     n: "06",
+    title: "Real-time WebSockets",
+    body: "Opt-in WebSockets with a built-in room/channel pub/sub — broadcast from any handler, cron, or automation. Bun-native, no socket.io. Off until you set ws.",
+  },
+  {
+    n: "07",
     title: "ORM-agnostic",
     body: "The framework imports no ORM. Bring Prisma, Drizzle, or raw SQL. Nothing in the hot path you didn't put there.",
   },
   {
-    n: "07",
+    n: "08",
     title: "Optional cron & automations",
     body: "Drop a file in cron/ for scheduled jobs (memory / Postgres / Redis / SQLite locks) or automations/ for LISTEN/NOTIFY event handlers. Off until the directory exists.",
   },
   {
-    n: "08",
+    n: "09",
     title: "AI-proof by convention",
     body: "One obvious way to do each thing, enforced. A shipped clean-code contract, a baguette/eslint preset, and baguette check keep the codebase boring and typed.",
   },
@@ -203,7 +208,7 @@ export default component$(() => {
               Everything, by convention.
             </h2>
             <span class="font-mono text-[11px] uppercase tracking-[0.28em] text-ink/40">
-              Eight moving parts
+              Nine moving parts
             </span>
           </div>
 

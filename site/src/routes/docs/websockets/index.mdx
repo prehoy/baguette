@@ -1,0 +1,68 @@
+---
+title: WebSockets — baguette
+---
+
+# WebSockets
+
+baguette speaks WebSockets natively — but they're **opt-in**: a plain HTTP app exposes no upgrade surface until you set `ws`. For the common case there's a built-in room/channel pub/sub; for your own protocol, use `upgradeWebSocket` directly.
+
+## Built-in pub/sub
+
+Turn it on with `ws: true`. It mounts `/api/ws/:room/:channel` and tracks every connection by room + channel:
+
+```ts
+serve({ routesDir: "./api", ws: true });
+```
+
+Broadcast to everyone on a room + channel from anywhere — a route handler, a cron job, an automation:
+
+```ts
+import { pubSubManager } from "@prehoy/baguette";
+
+pubSubManager.send({
+  room: "org_42",
+  channel: "notifications",
+  message: JSON.stringify({ type: "invoice.paid", id }),
+});
+```
+
+Clients connect to `wss://your-host/api/ws/org_42/notifications` and receive every message sent to that room + channel. Connections are cleaned up automatically on close. Custom path:
+
+```ts
+serve({ ws: { path: "/realtime/:room/:channel" } });
+```
+
+## Custom WebSocket routes
+
+For your own protocol — custom `onMessage`, auth on connect, per-socket state — use `upgradeWebSocket` on any route and mount it via `onApp`. Set `ws: { pubsub: false }` to wire the socket handler without the built-in pub/sub endpoint:
+
+```ts
+import { serve, upgradeWebSocket } from "@prehoy/baguette";
+
+serve({
+  routesDir: "./api",
+  ws: { pubsub: false }, // wire WebSockets, skip the built-in room/channel endpoint
+  onApp: (app) => {
+    app.get(
+      "/ws/echo",
+      upgradeWebSocket(() => ({
+        onMessage: (evt, ws) => ws.send(`echo: ${evt.data}`),
+        onClose: () => console.log("closed"),
+      })),
+    );
+  },
+});
+```
+
+## How it works
+
+- **Opt-in** — no upgrade surface exists until you set `ws`. `serve()` loads the WebSocket module and wires Bun's handler only then, so a plain HTTP app exposes nothing extra.
+- **Fan-out by room + channel** — `pubSubManager` holds connections in memory and sends only to matching subscribers.
+- **Bun-native** — built on Bun's WebSocket via Hono's `createBunWebSocket`; no socket.io, no extra dependency.
+
+> **Scaling out:** `pubSubManager` fans out within one process. Across replicas, publish through Redis (or your broker) and have each instance call `pubSubManager.send` from its subscriber, so a message reaches sockets on every node.
+
+## Related
+
+- [serve](/docs/serve/) — the `ws` option and everything else `serve()` wires up.
+- [Automations](/docs/automations/) — DB events you might push over a socket.

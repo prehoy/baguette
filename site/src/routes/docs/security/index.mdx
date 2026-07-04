@@ -1,0 +1,83 @@
+---
+title: Security — baguette
+---
+
+# Security
+
+baguette ships the controls every API needs as declarative options — no middleware wiring, no forgotten `requireAuth`. Turn each on with a flag.
+
+## Authentication
+
+Mark a route `auth: true` and give `serve()` a resolver. It runs before the handler; a falsy result is a `401`, otherwise the user is typed on the context.
+
+```ts
+// server.ts
+serve({ routesDir: "./api", auth: (c) => verifySession(c.req.header("authorization")) });
+
+// api/orders/create.ts
+export default defineRoute({
+  method: "post",
+  auth: true,
+  handler: (c) => {
+    const user = c.get("user"); // typed — augment BaguetteUser
+    return c.json({ ownerId: user.id });
+  },
+});
+```
+
+A route with `auth: true` and no resolver throws at boot — you can't ship an unprotected "protected" route.
+
+## Rate limiting
+
+Cap brute-force and email-bombing per route. Runs **before** auth, keyed by client IP (honouring `X-Forwarded-For` behind a proxy):
+
+```ts
+export default defineRoute({
+  method: "post",
+  rateLimit: { limit: 5, window: "15m" }, // 5 attempts / 15 min / IP → 429
+  auth: true,
+  handler: login,
+});
+```
+
+Bucket by something other than IP — e.g. the target email, to stop bombing one address — with `key`:
+
+```ts
+rateLimit: { limit: 3, window: "1h", key: (c) => c.req.query("email") ?? clientIp(c) }
+```
+
+Counters are in-memory by default; set `RATELIMIT_STORE=redis` (+ `REDIS_URL`) to share limits across replicas. Over the limit → `429` with `Retry-After`.
+
+## Security headers
+
+`securityHeaders: true` adds HSTS, `X-Content-Type-Options: nosniff`, `X-Frame-Options`, `Referrer-Policy`, and more:
+
+```ts
+serve({ routesDir: "./api", securityHeaders: true });
+```
+
+## CORS, done right
+
+The default is `origin: "*"` with no credentials. For a browser sending cookies or a Bearer token you must reflect the origin — baguette **refuses** the invalid `origin:"*"` + `credentials` combo and gives you a valid recipe:
+
+```ts
+serve({ cors: { reflect: true, credentials: true } });
+```
+
+## Body-size limit
+
+Cap request bodies to shrink the DoS surface; larger → `413`:
+
+```ts
+serve({ bodyLimit: 1_000_000 }); // 1 MB
+```
+
+## Errors don't leak
+
+An unhandled throw becomes a generic `500` with a `process_id` only. The full error — message, stack, upstream payloads — goes to the logs, correlated by that id. Nothing internal is echoed to the client, so error responses aren't a recon surface.
+
+## Related
+
+- [defineRoute](/docs/define-route/) — `auth`, `rateLimit`, `middleware` per route.
+- [serve](/docs/serve/) — `securityHeaders`, `cors`, `bodyLimit`, `rateLimitStore`.
+- [Clean-code contract](/docs/clean-code-contract/) — "protect routes declaratively" is enforced.

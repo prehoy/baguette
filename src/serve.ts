@@ -22,7 +22,12 @@ export default async function serve(opts: ServeOptions = {}) {
 
   const app = await createApp(opts);
   const port = opts.port ?? (Number(Bun.env.PORT) || 3000);
-  const server = Bun.serve({ port, fetch: app.fetch, reusePort: true });
+  // WebSockets are opt-in: only wire Bun's ws handler (and load the ws module) when
+  // `ws` is set, so non-WS apps expose no upgrade surface at all.
+  const base = { port, fetch: app.fetch, reusePort: true } as const;
+  const server = opts.ws
+    ? Bun.serve({ ...base, websocket: (await import("./websocket")).websocket })
+    : Bun.serve(base);
   logger.info({ message: `baguette listening on :${port}` });
 
   // Optional layers — dynamic-imported so HTTP-only apps never load them.

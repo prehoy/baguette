@@ -18,6 +18,8 @@ const NAV: NavGroup[] = [
       { label: "Getting started", href: "/docs/" },
       { label: "defineRoute", href: "/docs/define-route/" },
       { label: "serve", href: "/docs/serve/" },
+      { label: "Security", href: "/docs/security/" },
+      { label: "WebSockets", href: "/docs/websockets/" },
     ],
   },
   {

@@ -26,3 +26,4 @@ export { default as stringifyError } from "./stringifyError";
 export { default as routeError } from "./routeError";
 export { default as routeHandler } from "./routeHandler";
 export { default as pubSubManager } from "./pubSubManager";
+export { upgradeWebSocket, websocket, pubSubWebSocket } from "./websocket";

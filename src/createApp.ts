@@ -29,6 +29,13 @@ export interface AppOptions {
   rateLimitStore?: RateLimitStore;
   /** Serve a static SPA (root dir) with an index.html fallback, mounted last. */
   spa?: string;
+  /**
+   * Opt into WebSockets (off by default — no upgrade surface unless set).
+   * `true` mounts the built-in room/channel pub/sub at /api/ws/:room/:channel.
+   * `{ path }` customizes it; `{ pubsub: false }` wires the ws handler only, for
+   * custom `upgradeWebSocket` routes you mount via `onApp`.
+   */
+  ws?: boolean | { path?: string; pubsub?: boolean };
   /** Escape hatch: mount custom middleware/static on the app before it listens. */
   onApp?: (app: OpenAPIHono) => void | Promise<void>;
   /** "basic": one metadata line per request (no body). false: off. */
@@ -104,6 +111,13 @@ export async function createApp(opts: AppOptions = {}): Promise<OpenAPIHono> {
     const title = d.title ?? "baguette API";
     app.doc(specPath, { openapi: "3.1.0", info: { title, version: "v1" } });
     app.get(docsPath, Scalar({ url: specPath, theme: (d.theme ?? "purple") as never, pageTitle: title }));
+  }
+
+  if (opts.ws && (typeof opts.ws !== "object" || opts.ws.pubsub !== false)) {
+    const { pubSubWebSocket } = await import("./websocket");
+    const wsPath = (typeof opts.ws === "object" && opts.ws.path) || "/api/ws/:room/:channel";
+    app.get(wsPath, pubSubWebSocket());
+    logger.info({ message: `WebSocket pub/sub mounted at ${wsPath}` });
   }
 
   // Custom mounting (cache headers, extra static, etc.) runs after the API so it
