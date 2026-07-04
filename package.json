@@ -1,18 +1,44 @@
 {
-  "name": "baguette",
-  "version": "0.0.1",
+  "name": "@prehoy/baguette",
+  "version": "0.1.0",
   "description": "Blazingly fast, zero-config Bun + Hono API framework. Drop a file, get a typed, documented, validated endpoint.",
+  "license": "MIT",
+  "homepage": "https://usebaguette.com",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/prehoy/baguette.git"
+  },
+  "bugs": "https://github.com/prehoy/baguette/issues",
+  "keywords": [
+    "bun",
+    "hono",
+    "api",
+    "framework",
+    "zod",
+    "openapi",
+    "typescript",
+    "file-based-routing"
+  ],
   "type": "module",
   "module": "src/index.ts",
   "types": "src/index.ts",
   "bin": {
     "baguette": "src/cli.ts"
   },
+  "files": [
+    "src",
+    "README.md",
+    "AGENTS.md",
+    "LICENSE"
+  ],
   "exports": {
     ".": "./src/index.ts",
     "./cron": "./src/cron.ts",
     "./automations": "./src/automations.ts",
     "./eslint": "./src/eslint.ts"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "scripts": {
     "dev": "bun --hot examples/server.ts",
