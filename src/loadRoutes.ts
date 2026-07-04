@@ -4,6 +4,7 @@ import { createRoute, type OpenAPIHono, type z } from "@hono/zod-openapi";
 import type { Context, MiddlewareHandler } from "hono";
 import { isBaguetteRoute, type AuthResolver, type RouteDescriptor } from "./defineRoute";
 import { ErrorSchema } from "./errorSchema";
+import { rateLimit, type RateLimitStore } from "./rateLimit";
 import routeHandler from "./routeHandler";
 import logger from "./logger";
 
@@ -14,7 +15,7 @@ import logger from "./logger";
  */
 export async function loadRoutes(
   app: OpenAPIHono,
-  opts: { routesDir: string; basePath?: string; auth?: AuthResolver },
+  opts: { routesDir: string; basePath?: string; auth?: AuthResolver; rateLimitStore?: RateLimitStore },
 ): Promise<string[]> {
   const dir = path.resolve(opts.routesDir);
   const base = opts.basePath ?? "/api";
@@ -40,7 +41,7 @@ export async function loadRoutes(
     if (isBaguetteRoute(def)) {
       if (def.auth && !opts.auth)
         throw new Error(`Route ${routePath} has auth:true but no auth resolver was configured (serve({ auth }))`);
-      mountRoute(app, routePath, def, opts.auth);
+      mountRoute(app, routePath, def, opts.auth, opts.rateLimitStore);
       mounted.push(`${def.method.toUpperCase()} ${routePath}`);
     } else if (typeof def === "function") {
       // Raw escape hatch (lint-flagged): schema-less handler, e.g. a webhook
@@ -59,6 +60,7 @@ function mountRoute(
   routePath: string,
   def: RouteDescriptor,
   authResolver?: AuthResolver,
+  rateLimitStore?: RateLimitStore,
 ) {
   const route = createRoute({
     method: def.method,
@@ -69,9 +71,13 @@ function mountRoute(
     responses: buildResponses(def.response),
   });
 
+  // Rate limit runs FIRST — before auth — so brute-force/email-bombing is capped
+  // before it ever reaches the auth resolver or handler.
+  const chain: MiddlewareHandler[] = [];
+  if (def.rateLimit) chain.push(rateLimit(def.rateLimit, rateLimitStore));
+
   // Declarative auth as a middleware: resolver runs, 401 short-circuits, else the
   // user is set on the context. Kills the per-handler requireAuth() bug class.
-  const chain: MiddlewareHandler[] = [];
   if (def.auth)
     chain.push(async (c, next) => {
       const user = await authResolver!(c);

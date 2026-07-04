@@ -17,6 +17,8 @@ export type { ServeOptions } from "./serve";
 export { loadRoutes } from "./loadRoutes";
 export { ErrorSchema } from "./errorSchema";
 export { validateEnv, defineEnv } from "./env";
+export { rateLimit, memoryStore, redisStore, clientIp, parseWindow } from "./rateLimit";
+export type { RateLimitOptions, RateLimitStore } from "./rateLimit";
 
 export { default as logger } from "./logger";
 export { default as processError } from "./processError";

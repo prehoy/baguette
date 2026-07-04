@@ -104,15 +104,18 @@ Declare auth on the route instead of calling `requireAuth(c)` by hand — forget
 ```ts
 export default defineRoute({
   method: "post",
-  auth: true,                    // resolver runs first; 401 if it returns no user
-  middleware: [rateLimit()],     // any Hono middleware, after auth
+  rateLimit: { limit: 5, window: "1m" }, // 429 after 5/min per IP — runs before auth
+  auth: true,                            // resolver runs; 401 if it returns no user
+  middleware: [csrfCheck],               // any extra Hono middleware, after auth
   request: { body: z.object({ name: z.string() }) },
   handler: (c, { body }) => {
-    const user = c.get("user");  // typed
+    const user = c.get("user");          // typed
     return c.json({ ownerId: user.id, name: body.name });
   },
 });
 ```
+
+`rateLimit` runs **before** auth, so brute-force and email-bombing are capped before they reach your resolver. It keys by client IP (honouring `X-Forwarded-For` behind a proxy) by default — pass `key: (c) => …` to bucket by user or email instead. The default counter is in-process; set `RATELIMIT_STORE=redis` (+ `REDIS_URL`) to share it across replicas.
 
 Type `c.get("user")` once by augmenting `BaguetteUser`:
 

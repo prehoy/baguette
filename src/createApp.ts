@@ -7,6 +7,7 @@ import { cors } from "hono/cors";
 import { secureHeaders } from "hono/secure-headers";
 import type { AuthResolver } from "./defineRoute";
 import { loadRoutes } from "./loadRoutes";
+import type { RateLimitStore } from "./rateLimit";
 import { validateEnv } from "./env";
 import logger from "./logger";
 
@@ -24,6 +25,8 @@ export interface AppOptions {
   securityHeaders?: boolean;
   /** Reject request bodies larger than this many bytes with 413. */
   bodyLimit?: number;
+  /** Backing store for per-route `rateLimit` (default: memory, or redis via env). */
+  rateLimitStore?: RateLimitStore;
   /** Serve a static SPA (root dir) with an index.html fallback, mounted last. */
   spa?: string;
   /** Escape hatch: mount custom middleware/static on the app before it listens. */
@@ -90,6 +93,7 @@ export async function createApp(opts: AppOptions = {}): Promise<OpenAPIHono> {
     routesDir: opts.routesDir ?? "./api",
     basePath: opts.basePath ?? "/api",
     auth: opts.auth,
+    rateLimitStore: opts.rateLimitStore,
   });
   logger.info({ message: `Loaded ${routes.length} routes` });
 

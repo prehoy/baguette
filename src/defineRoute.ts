@@ -1,5 +1,6 @@
 import type { z } from "@hono/zod-openapi";
 import type { Context, MiddlewareHandler } from "hono";
+import type { RateLimitOptions } from "./rateLimit";
 
 export type Method = "get" | "post" | "put" | "delete" | "patch" | "options";
 
@@ -38,6 +39,8 @@ export interface RouteConfig<
    * on the context (`c.get("user")`). Declarative — no per-handler requireAuth().
    */
   auth?: boolean;
+  /** Rate limit this route (runs before auth so it caps brute-force pre-login). */
+  rateLimit?: RateLimitOptions;
   /** Hono middleware to run before the handler (after auth). */
   middleware?: MiddlewareHandler[];
   request?: { params?: P; query?: Q; body?: B };
