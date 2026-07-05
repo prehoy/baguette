@@ -2,6 +2,7 @@ import type { ReactElement } from "react";
 import type { Context } from "hono";
 import { Glob } from "bun";
 import path from "node:path";
+import { defineQueue } from "./queue";
 
 /*
  * Opt-in email: React templates -> email-safe HTML, a preview endpoint, and send.
@@ -148,6 +149,28 @@ export function resendTransport(apiKey: string): EmailTransport {
     if (error) throw new Error(`Resend: ${(error as any).message ?? JSON.stringify(error)}`);
   };
 }
+
+/** Serializable email payload (React must be pre-rendered to `html`/`text`). */
+export type QueuedEmail = Omit<EmailMessage, "react">;
+
+/**
+ * Ready-made email queue (needs the queue layer + Redis). Run the worker by
+ * re-exporting it as a queue file:
+ *
+ *   // queues/email.ts
+ *   export { emailQueue as default } from "@prehoy/baguette/email";
+ *
+ * Then enqueue instead of sending inline:
+ *   await emailQueue.add({ to, subject, html: await renderEmail(<Welcome name={n}/>) });
+ */
+export const emailQueue = defineQueue<QueuedEmail>({
+  name: "baguette-email",
+  concurrency: 5,
+  retries: 3,
+  process: async (data) => {
+    await sendEmail(data);
+  },
+});
 
 /**
  * Preview endpoint. `serve({ emails: true })` mounts it at /api/emails (list) and

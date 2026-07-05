@@ -14,6 +14,8 @@ export interface ServeOptions extends AppOptions {
   cron?: boolean | { db?: string; dir?: string };
   /** Automations are opt-in (need the table list). Omit to leave them off. */
   automations?: { db: string; tables: string[]; dir?: string };
+  /** Queues: auto-on if ./queues exists. false to disable; {dir}/{redis} to configure. */
+  queues?: boolean | { dir?: string; redis?: any };
 }
 
 /** Build the app and start listening. Returns the app for further wiring/tests. */
@@ -43,6 +45,15 @@ export default async function serve(opts: ServeOptions = {}) {
     const { startAutomations } = await import("./automations");
     await startAutomations(opts.automations);
   }
+  const queuesDir = (typeof opts.queues === "object" && opts.queues.dir) || "./queues";
+  let queueController: { close: () => Promise<void> } | undefined;
+  if (opts.queues !== false && existsSync(path.resolve(queuesDir))) {
+    const { startQueues } = await import("./queue");
+    queueController = await startQueues({
+      dir: queuesDir,
+      redis: typeof opts.queues === "object" ? opts.queues.redis : undefined,
+    });
+  }
 
   // Graceful shutdown: stop accepting, run the hook, exit. Registered once.
   let closing = false;
@@ -52,6 +63,7 @@ export default async function serve(opts: ServeOptions = {}) {
     logger.info({ message: `${sig} received — draining` });
     try {
       server.stop();
+      await queueController?.close();
       await opts.onShutdown?.();
     } catch (e) {
       logger.error({ message: "Error during shutdown", error: processError(e) });

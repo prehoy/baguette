@@ -1,6 +1,6 @@
 {
   "name": "@prehoy/baguette",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "Blazingly fast, zero-config Bun + Hono API framework. Drop a file, get a typed, documented, validated endpoint.",
   "license": "MIT",
   "homepage": "https://usebaguette.com",
@@ -35,6 +35,7 @@
     ".": "./src/index.ts",
     "./cron": "./src/cron.ts",
     "./automations": "./src/automations.ts",
+    "./queue": "./src/queue.ts",
     "./email": "./src/email.ts",
     "./eslint": "./src/eslint.ts"
   },
@@ -59,18 +60,21 @@
     "@types/bun": "latest",
     "@types/nodemailer": "^6.4.0",
     "@types/react": "^19.0.0",
+    "bee-queue": "^1.7.1",
     "nodemailer": "^6.9.0",
     "react": "^19.0.0",
     "resend": "^4.0.0"
   },
   "peerDependencies": {
     "@react-email/render": ">=1",
+    "bee-queue": ">=1.6",
     "nodemailer": ">=6",
     "react": ">=18",
     "typescript": "^5.6.0"
   },
   "peerDependenciesMeta": {
     "@react-email/render": { "optional": true },
+    "bee-queue": { "optional": true },
     "nodemailer": { "optional": true },
     "react": { "optional": true }
   }

@@ -1,0 +1,79 @@
+---
+title: Queues — baguette
+---
+
+# Queues
+
+Opt-in background job queues on **bee-queue + Redis**, folder-based like everything else: one file per queue in `queues/`, and `serve()` starts the workers when the directory exists. It lives in `@prehoy/baguette/queue`; **bee-queue is an optional peer dependency**.
+
+```bash
+bun add bee-queue
+```
+
+## Define a queue
+
+One file per queue. The processor is typed by the job data:
+
+```ts
+// queues/resize-image.ts
+import { defineQueue } from "@prehoy/baguette/queue";
+
+export default defineQueue<{ url: string; width: number }>({
+  name: "resize-image",
+  concurrency: 3,       // jobs in parallel per worker
+  retries: 2,           // default retries per job
+  process: async ({ url, width }) => {
+    await resizeAndStore(url, width);
+  },
+});
+```
+
+Scaffold one with `baguette new queue resize-image`.
+
+## Enqueue jobs
+
+Import the queue handle and `add` — fully typed against the processor's job type:
+
+```ts
+import resizeImage from "../queues/resize-image";
+
+await resizeImage.add({ url, width: 800 });
+await resizeImage.add({ url, width: 800 }, { delay: 60_000, retries: 5 }); // options
+```
+
+`add` opens a lazy **producer** connection (never a worker), so enqueueing from a route pulls in no processing code.
+
+## Run the workers
+
+`serve()` auto-starts a worker per `queues/*.ts` when the directory exists — nothing to wire:
+
+```ts
+serve({ routesDir: "./api" }); // queues/ present -> workers start, stalled jobs handled
+```
+
+Disable with `serve({ queues: false })`, or point at another Redis with `serve({ queues: { redis } })`. Workers close on `SIGTERM` before exit. Redis comes from `QUEUE_REDIS_URL` / `REDIS_URL`, or `REDIS_HOST` / `REDIS_PORT` / `REDIS_PASSWORD`.
+
+Split producer and worker across deployments if you like: only the instance that mounts `queues/` (or calls `startQueues()`) processes; any instance can `add`.
+
+## Email queue
+
+`@prehoy/baguette/email` ships a ready-made queue so email sends off the request path. Re-export it as a queue file to run the worker:
+
+```ts
+// queues/email.ts
+export { emailQueue as default } from "@prehoy/baguette/email";
+```
+
+Then enqueue instead of sending inline (pre-render, since job data is JSON):
+
+```ts
+import { emailQueue, renderEmail } from "@prehoy/baguette/email";
+
+await emailQueue.add({ to, subject: "Welcome", html: await renderEmail(<Welcome name={name} />) });
+```
+
+## Related
+
+- [Email](/docs/email/) — the `emailQueue` helper.
+- [Cron](/docs/cron/) — time-scheduled jobs (vs. on-demand queue jobs).
+- [serve](/docs/serve/) — the `queues` option.

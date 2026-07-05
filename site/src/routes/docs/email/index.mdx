@@ -74,7 +74,20 @@ await sendEmail({
 
 ## Queueing (for volume)
 
-baguette sends directly — simple and correct for transactional email. For high volume or retry/dedup, queue it: write rows from `sendEmail`'s call sites and drain them from a [cron job](/docs/cron/) or [automation](/docs/automations/). That machinery is app-specific, so it isn't baked into the framework.
+`sendEmail` sends directly — simple and correct for transactional email. To take sending off the request path (retries, backpressure), use the ready-made **email queue**. Re-export it as a queue file to run the worker:
+
+```ts
+// queues/email.ts
+export { emailQueue as default } from "@prehoy/baguette/email";
+```
+
+Then enqueue instead of sending inline — pre-render, since job data is JSON:
+
+```ts
+await emailQueue.add({ to, subject: "Welcome", html: await renderEmail(<Welcome name={name} />) });
+```
+
+See [Queues](/docs/queues/) for the full queue layer.
 
 ## Related
 

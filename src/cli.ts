@@ -12,6 +12,7 @@ Usage:
   baguette new route <path>          scaffold api/<path>.ts
   baguette new cron <name>           scaffold cron/<name>.ts
   baguette new automation <name>     scaffold automations/<name>.ts
+  baguette new queue <name>          scaffold queues/<name>.ts
   baguette check                     verify every api/ file exports a route
   baguette --help
 `;
@@ -50,14 +51,26 @@ export const automation = async (payload: string) => {
 };
 `;
 
+const queueTpl = (name: string) => `import { defineQueue } from "@prehoy/baguette/queue";
+
+export default defineQueue<{ /* job data */ }>({
+  name: "${name}",
+  concurrency: 5,
+  process: async (data) => {
+    // TODO: handle the job
+  },
+});
+`;
+
 async function scaffold(kind: string, name: string) {
   const spec: Record<string, [string, () => string]> = {
     route: [`api/${name}.ts`, routeTpl],
     cron: [`cron/${name}.ts`, () => cronTpl(name)],
     automation: [`automations/${name}.ts`, () => automationTpl(name)],
+    queue: [`queues/${name}.ts`, () => queueTpl(name)],
   };
   const entry = spec[kind];
-  if (!entry) return fail(`unknown scaffold "${kind}" (route|cron|automation)`);
+  if (!entry) return fail(`unknown scaffold "${kind}" (route|cron|automation|queue)`);
   const [rel, tpl] = entry;
   const file = path.resolve(rel);
   if (await Bun.file(file).exists()) return fail(`${rel} already exists`);
