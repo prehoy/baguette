@@ -69,8 +69,8 @@ const features = [
   },
   {
     n: "08",
-    title: "Optional cron & automations",
-    body: "Drop a file in cron/ for scheduled jobs (memory / Postgres / Redis / SQLite locks) or automations/ for LISTEN/NOTIFY event handlers. Off until the directory exists.",
+    title: "Optional cron, automations & email",
+    body: "cron/ for scheduled jobs (memory / Postgres / Redis / SQLite locks), automations/ for LISTEN/NOTIFY handlers, and React email templates with a browser preview. Each off until you opt in.",
   },
   {
     n: "09",

@@ -27,6 +27,7 @@ const NAV: NavGroup[] = [
     items: [
       { label: "Cron", href: "/docs/cron/" },
       { label: "Automations", href: "/docs/automations/" },
+      { label: "Email", href: "/docs/email/" },
     ],
   },
   {

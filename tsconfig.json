@@ -12,6 +12,8 @@
     "skipLibCheck": true,
     "allowSyntheticDefaultImports": true,
     "forceConsistentCasingInFileNames": true,
+    "jsx": "react-jsx",
+    "jsxImportSource": "react",
     "types": ["bun-types"]
   },
   "exclude": ["node_modules", "site"]

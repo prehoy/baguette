@@ -16,6 +16,7 @@ const pages = [
   { slug: "websockets", title: "WebSockets", file: "src/routes/docs/websockets/index.mdx" },
   { slug: "cron", title: "Cron", file: "src/routes/docs/cron/index.mdx" },
   { slug: "automations", title: "Automations", file: "src/routes/docs/automations/index.mdx" },
+  { slug: "email", title: "Email", file: "src/routes/docs/email/index.mdx" },
   { slug: "cli", title: "CLI", file: "src/routes/docs/cli/index.mdx" },
   { slug: "clean-code-contract", title: "Clean-code contract", file: "src/routes/docs/clean-code-contract/index.mdx" },
 ];

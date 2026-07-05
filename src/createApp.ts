@@ -36,6 +36,12 @@ export interface AppOptions {
    * custom `upgradeWebSocket` routes you mount via `onApp`.
    */
   ws?: boolean | { path?: string; pubsub?: boolean };
+  /**
+   * Mount the email preview endpoint (off by default). `true` serves the
+   * `emails/` dir at /api/emails (list) + /api/emails/:name (rendered HTML).
+   * Gate it in production if you don't want templates exposed.
+   */
+  emails?: boolean | { dir?: string; path?: string };
   /** Escape hatch: mount custom middleware/static on the app before it listens. */
   onApp?: (app: OpenAPIHono) => void | Promise<void>;
   /** "basic": one metadata line per request (no body). false: off. */
@@ -134,6 +140,15 @@ export async function createApp(opts: AppOptions = {}): Promise<OpenAPIHono> {
     const wsPath = (typeof opts.ws === "object" && opts.ws.path) || "/api/ws/:room/:channel";
     app.get(wsPath, pubSubWebSocket());
     logger.info({ message: `WebSocket pub/sub mounted at ${wsPath}` });
+  }
+
+  if (opts.emails) {
+    const { emailPreview } = await import("./email");
+    const base = (typeof opts.emails === "object" && opts.emails.path) || "/api/emails";
+    const h = emailPreview({ dir: typeof opts.emails === "object" ? opts.emails.dir : undefined });
+    app.get(base, h);
+    app.get(`${base}/:name`, h);
+    logger.info({ message: `Email preview mounted at ${base}` });
   }
 
   // Custom mounting (cache headers, extra static, etc.) runs after the API so it

@@ -1,0 +1,82 @@
+---
+title: Email — baguette
+---
+
+# Email
+
+Opt-in email built on **React templates**: write emails as components, preview them in the browser, and send them. It lives in a separate entry point — `@prehoy/baguette/email` — so the React/mail dependencies stay out of the HTTP core. A plain API never pulls them in.
+
+```bash
+bun add @prehoy/baguette/email react @react-email/render @react-email/components nodemailer
+```
+
+React, `@react-email/render`, and `nodemailer` are **optional peer dependencies** — install them only if you use email.
+
+## Templates
+
+An email is a React component in `emails/`, plus optional `preview` sample props for the preview endpoint. Fetch data in your route handler and pass it as props (templates stay pure and previewable).
+
+```tsx
+// emails/Welcome.tsx
+import { Body, Container, Head, Heading, Html, Text } from "@react-email/components";
+
+export default function Welcome({ name }: { name: string }) {
+  return (
+    <Html>
+      <Head />
+      <Body>
+        <Container>
+          <Heading>Welcome, {name} 🥖</Heading>
+          <Text>Thanks for signing up.</Text>
+        </Container>
+      </Body>
+    </Html>
+  );
+}
+
+export const preview = { name: "Ada" }; // used by the preview endpoint
+```
+
+## Preview
+
+`serve({ emails: true })` mounts a preview at `/api/emails` (lists every template) and `/api/emails/:name` (renders it as HTML with its `preview` props) — open it in a browser while you design.
+
+```ts
+serve({ routesDir: "./api", emails: true });
+// GET /api/emails            -> { "templates": ["Welcome", ...] }
+// GET /api/emails/Welcome    -> rendered HTML
+```
+
+It's opt-in and shows sample data only, but **gate it in production** if you don't want templates exposed: `emails: process.env.NODE_ENV !== "production"`.
+
+## Sending
+
+```ts
+import { sendEmail } from "@prehoy/baguette/email";
+import Welcome from "../emails/Welcome";
+
+await sendEmail({
+  to: user.email,
+  subject: "Welcome",
+  react: <Welcome name={user.name} />, // rendered to HTML + a plain-text alternative
+});
+```
+
+`sendEmail` renders the React element (if given), drops empty recipients, and sends through a transport. The transport is chosen from env:
+
+| Env | Transport |
+| --- | --- |
+| `RESEND_API_KEY` | Resend (`bun add resend`) |
+| `SMTP_URL` | nodemailer, connection string |
+| `SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` / `SMTP_PASS` | nodemailer |
+
+`EMAIL_FROM` is the default sender. Pass a `transport` as the second argument to override, or use `renderEmail(<Welcome .../>)` to get the HTML string and send it yourself.
+
+## Queueing (for volume)
+
+baguette sends directly — simple and correct for transactional email. For high volume or retry/dedup, queue it: write rows from `sendEmail`'s call sites and drain them from a [cron job](/docs/cron/) or [automation](/docs/automations/). That machinery is app-specific, so it isn't baked into the framework.
+
+## Related
+
+- [serve](/docs/serve/) — the `emails` preview option.
+- [Cron](/docs/cron/) — drain an email queue on a schedule.
