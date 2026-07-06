@@ -1,0 +1,18 @@
+{
+  "name": "create-baguette",
+  "version": "0.1.0",
+  "description": "Scaffold a new baguette (Bun + Hono) API in seconds.",
+  "type": "module",
+  "bin": {
+    "create-baguette": "./index.ts"
+  },
+  "files": [
+    "index.ts",
+    "template"
+  ],
+  "license": "MIT",
+  "homepage": "https://usebaguette.com",
+  "publishConfig": {
+    "access": "public"
+  }
+}

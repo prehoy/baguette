@@ -1,10 +1,26 @@
 # 🥖 baguette
 
-**Blazingly fast, zero-config Bun + Hono API framework.** Drop a file, get a
-typed, documented, validated endpoint.
+**The Bun + Hono API framework your AI agent can't make a mess of.**
+
+Generated backend code rots because there are a hundred ways to do everything.
+baguette ships **one** — file-based routes, zod-first I/O, batteries included — and
+enforces it with a checker your AI can't merge around. Blazingly fast, zero-config,
+typed end to end.
+
+[Docs](https://usebaguette.com) · [npm](https://www.npmjs.com/package/@prehoy/baguette) · [llms.txt](https://usebaguette.com/llms.txt)
+
+## Quickstart
+
+```bash
+bun create baguette my-api
+cd my-api && bun run dev     # → http://localhost:3000 · docs at /api/docs
+```
+
+Add an endpoint — the file's location is the URL, and one declaration gives you
+validation, inferred types, OpenAPI docs, and an error funnel:
 
 ```ts
-// api/customers/[id].ts
+// api/customers/[id].ts  →  GET /api/customers/{id}
 import { defineRoute, z } from "@prehoy/baguette";
 
 export default defineRoute({
@@ -18,28 +34,47 @@ export default defineRoute({
 ```ts
 // server.ts
 import { serve } from "@prehoy/baguette";
-serve({ routesDir: "./api" }); // routes loaded, docs at /api/docs
+serve({ routesDir: "./api" });   // routes loaded, docs live, done
 ```
 
-One zod declaration gives you runtime validation, inferred handler types, the
-OpenAPI spec, and an error funnel. The path comes from the file's location.
+## Built for AI agents
 
-## Why
-- **zod-first** — one source of truth, no hand-wired OpenAPI, no manual parsing.
-- **File-based routing** — `api/customers/[id].ts` → `/api/customers/{id}`.
-- **Auto docs** — Scalar UI at `/api/docs`, spec at `/api/doc`.
-- **ORM-agnostic** — bring Prisma, Drizzle, or raw SQL.
-- **Secure by default** — declarative per-route `auth`, rate limiting, security headers, a CORS footgun guard, and body limits.
-- **Production-ready** — `onBoot`/`onShutdown` + graceful SIGTERM, static/SPA serving, typed `defineEnv`.
-- **Optional cron & automations** — `cron/` (memory/Postgres/Redis/SQLite locks) and `automations/` (LISTEN/NOTIFY), opt-in.
-- **AI-proof** — one-way conventions + a shipped [clean-code contract](./AGENTS.md) + a CI checker + an [llms.txt](https://usebaguette.com/llms.txt).
+The thing that makes generated code a mess — infinite ways to structure it — is the
+thing baguette removes. Every app on baguette is the same shape, so an agent (or a
+new hire) can't drift:
 
-## Status
-Published on [npm](https://www.npmjs.com/package/@prehoy/baguette) (`bun add @prehoy/baguette`) and running in production. Docs at [usebaguette.com](https://usebaguette.com). See [PLAN.md](./PLAN.md).
+- **One obvious way** — one route per file, all I/O through zod, no manual parsing.
+- **A shipped [clean-code contract](./AGENTS.md)** every repo inherits — read by humans *and* the AI tools working in it.
+- **`baguette/eslint` + `baguette check`** turn the conventions into CI failures, so an agent physically can't merge the mess.
+- **[llms.txt](https://usebaguette.com/llms.txt)** — the whole framework, machine-readable, so agents get it right the first time.
 
-## Dev
-```
+## Batteries included — each opt-in
+
+| | |
+|---|---|
+| **Routing** | File-based, `[id]` params, method-suffixed files, auto Scalar docs |
+| **Validation** | zod-first: one schema → validation + types + OpenAPI |
+| **Security** | Declarative per-route `auth`, rate limiting, security headers, CORS guard, body limits |
+| **Real-time** | Opt-in WebSockets with a room/channel pub/sub |
+| **Background** | `cron/` (memory/Postgres/Redis/SQLite locks), `queues/` (bee-queue), `automations/` (LISTEN/NOTIFY) |
+| **Email** | React templates, browser preview, send via Resend/SMTP |
+| **Ops** | `onBoot`/`onShutdown` + graceful SIGTERM, static/SPA serving, typed `defineEnv` |
+| **Agnostic** | No ORM in the core — Prisma, Drizzle, or raw SQL |
+
+Full docs: **[usebaguette.com/docs](https://usebaguette.com/docs)**
+
+## Deploy
+
+`bun create baguette` ships a Dockerfile — run it anywhere, or have it **managed on
+[Berth](https://useberth.com)**. Building something bigger? [Talk to Prehoy](https://prehoy.com)
+— we do the infra and the backend.
+
+## Contributing / dev
+
+```bash
 bun install
 bun test
 bun run dev      # runs examples/ on :3000
 ```
+
+MIT · a [Prehoy Industries](https://prehoy.com) project · [usebaguette.com](https://usebaguette.com)

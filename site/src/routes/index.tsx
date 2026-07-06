@@ -1,6 +1,7 @@
 import { component$ } from "@builder.io/qwik";
 import { Link, type DocumentHead } from "@builder.io/qwik-city";
 import { CodeBlock } from "~/components/code";
+import { TerminalDemo } from "~/components/terminal-demo";
 import { SiteHeader, SiteFooter } from "~/components/chrome";
 
 const routeSample = `// api/customers/[id].ts
@@ -101,7 +102,7 @@ export default component$(() => {
             <div class="animate-fade-up flex items-center gap-3">
               <span class="h-px w-8 bg-crust" />
               <span class="font-mono text-[11px] uppercase tracking-[0.28em] text-crust-deep">
-                Bun + Hono API framework
+                AI-native · Bun + Hono framework
               </span>
             </div>
 
@@ -155,6 +156,36 @@ export default component$(() => {
               One zod declaration &rarr; validation, types, docs, and an error
               funnel.
             </p>
+          </div>
+        </section>
+
+        {/* ---------------- 60-SECOND DEMO ---------------- */}
+        <section class="border-t-2 border-ink py-16 [&>*]:min-w-0 md:py-24">
+          <div class="grid gap-12 lg:grid-cols-[0.9fr_1.1fr] lg:items-center lg:gap-16">
+            <div>
+              <span class="font-mono text-[11px] uppercase tracking-[0.28em] text-ink/40">
+                Zero to running
+              </span>
+              <h2 class="mt-4 font-display text-[clamp(2rem,4.5vw,3.4rem)] uppercase leading-[0.95]">
+                A typed API in four commands.
+              </h2>
+              <p class="mt-6 max-w-md leading-relaxed text-ink/65">
+                Scaffold, run, hit it. No config, no boilerplate, no wiring — the docs generate
+                themselves and every response is validated and typed.
+              </p>
+              <div class="mt-8 flex items-stretch border-2 border-ink">
+                <span
+                  aria-hidden="true"
+                  class="flex items-center bg-ink px-3 font-mono text-sm text-crust"
+                >
+                  $
+                </span>
+                <code class="flex items-center px-4 py-2.5 font-mono text-sm font-medium tracking-tight text-ink">
+                  bun create baguette my-api
+                </code>
+              </div>
+            </div>
+            <TerminalDemo />
           </div>
         </section>
 
@@ -285,6 +316,33 @@ export default component$(() => {
                 <code class="font-mono">baguette check</code> runs in CI. Clean
                 code passes; clever code doesn&rsquo;t.
               </p>
+            </div>
+          </div>
+        </section>
+
+        {/* ---------------- FUNNEL: built by Prehoy ---------------- */}
+        <section class="border-t-2 border-ink py-16 md:py-24">
+          <div class="flex flex-col gap-8 md:flex-row md:items-end md:justify-between">
+            <div class="max-w-xl">
+              <span class="font-mono text-[11px] uppercase tracking-[0.28em] text-crust-deep">
+                Backend, handled
+              </span>
+              <h2 class="mt-4 font-display text-[clamp(2rem,4.5vw,3.4rem)] uppercase leading-[0.95]">
+                Ship it. Or have us ship it.
+              </h2>
+              <p class="mt-6 leading-relaxed text-ink/65">
+                baguette is built by <a href="https://prehoy.com" target="_blank" rel="noreferrer" class="border-b-2 border-crust text-ink transition-colors hover:border-ink">Prehoy Industries</a>.
+                Deploy your API managed on Berth, or bring us in to build and run the
+                whole backend and infrastructure.
+              </p>
+            </div>
+            <div class="flex flex-none flex-wrap gap-3">
+              <a href="https://useberth.com" target="_blank" rel="noreferrer" class="bg-ink px-6 py-3 text-sm font-medium uppercase tracking-[0.14em] text-paper transition-colors hover:bg-crust hover:text-ink">
+                Deploy on Berth &rarr;
+              </a>
+              <a href="https://prehoy.com" target="_blank" rel="noreferrer" class="border-2 border-ink px-6 py-3 text-sm font-medium uppercase tracking-[0.14em] text-ink transition-colors hover:bg-ink hover:text-paper">
+                Talk to us
+              </a>
             </div>
           </div>
         </section>

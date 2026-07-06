@@ -90,6 +90,27 @@ body {
   }
 }
 
+/* ---- Animated terminal demo cursor ---- */
+.term-cursor {
+  display: inline-block;
+  width: 0.55em;
+  height: 1.05em;
+  margin-left: 1px;
+  vertical-align: text-bottom;
+  background: #c8963e;
+  animation: term-blink 1s steps(1) infinite;
+}
+@keyframes term-blink {
+  50% {
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .term-cursor {
+    animation: none;
+  }
+}
+
 /* ---- Hand-styled code blocks (no runtime highlighter) ---- */
 .code-frame {
   font-family: var(--font-mono);
