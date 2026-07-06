@@ -1,0 +1,44 @@
+---
+title: baguette vs Elysia — baguette
+---
+
+# baguette vs Elysia
+
+Both are Bun-native and obsessed with developer experience — but they make different bets. Elysia bets on **raw speed + an end-to-end typed client**. baguette bets on **file-based conventions, batteries, and enforcement your AI can't drift around**.
+
+| | Elysia | baguette |
+| --- | --- | --- |
+| **Runtime** | Bun-native | Bun-native |
+| **Routing** | Code-based, method chaining | File-based — drop a file |
+| **Schema / validation** | TypeBox | zod |
+| **Typed client** | **Eden** — end-to-end typed RPC | OpenAPI/Scalar docs (no typed client) |
+| **API docs** | Auto Swagger | Auto Scalar |
+| **Raw performance** | **Fastest Bun framework** | Fast (Hono core) |
+| **Batteries** | Rich plugin ecosystem (you assemble) | Opt-in layers built in: auth, rate limit, security, cron, queues, email, WebSockets |
+| **Convention enforcement** | — | **AI-proof**: shipped contract + eslint preset + `baguette check` |
+| **Maturity / community** | Larger, more momentum | Newer |
+
+## Where Elysia wins — honestly
+
+- **Raw throughput.** Elysia is the benchmark leader among Bun frameworks. If requests-per-second is your top constraint, it's excellent. (For most real APIs, the DB — not the framework — is the bottleneck, but the numbers are the numbers.)
+- **Eden — the end-to-end typed client.** Call your API from a frontend with full type inference, no codegen. baguette gives you an OpenAPI spec + Scalar docs instead; if a typed RPC client is central to your stack, Elysia has a real edge.
+- **Ecosystem & momentum.** More plugins, more stars, more Stack Overflow answers today.
+
+If those are your priorities, Elysia is a great choice and we'd tell you so.
+
+## Where baguette bets differently
+
+- **File-based routing.** Drop `api/customers/[id].ts` and it's live — no central route registry, no method chains. The file *is* the route.
+- **Batteries as opt-in layers, not assembly.** Auth, rate limiting, security headers, cron (with Postgres/Redis/SQLite locks), bee-queue queues, React email, WebSockets — each one flag or one folder, not a plugin hunt.
+- **AI-proof by convention.** One obvious way to do everything, enforced by a shipped `AGENTS.md` contract, a `baguette/eslint` preset, `baguette check`, and an `llms.txt`. In the age of AI-written backends, this is the differentiator: an agent physically can't merge the mess.
+
+## Choose baguette if…
+
+…you value one-obvious-way conventions, built-in batteries, and AI-agent-friendliness over squeezing out the last benchmark point or wiring an Eden client. Choose Elysia if raw speed or an end-to-end typed client is the thing you're optimizing for.
+
+Both are good. This is a genuine fork, not a trap.
+
+## Related
+
+- [baguette vs Hono](/docs/compare/hono/)
+- [Built for AI agents](/docs/clean-code-contract/)

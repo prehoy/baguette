@@ -1,0 +1,43 @@
+---
+title: baguette vs Hono — baguette
+---
+
+# baguette vs Hono
+
+Short version: **baguette is built on Hono.** It's not a competitor — it's an opinionated, batteries-included layer on top of Hono's router and middleware. So the real question isn't "which is better," it's "how much do you want decided for you?"
+
+| | Hono | baguette |
+| --- | --- | --- |
+| **What it is** | A minimal, unopinionated web framework | An opinionated API framework built on Hono |
+| **Routing** | Manual — `app.get("/x", …)` | File-based — drop `api/x.ts` |
+| **Validation** | Add `@hono/zod-openapi` and wire it yourself | zod-first, built in |
+| **API docs** | Mount Scalar/Swagger yourself | Auto at `/api/docs` |
+| **Auth · rate limit · security · CORS** | Compose middleware | Declarative, one flag each |
+| **Cron · queues · automations · email · WebSockets** | Bring your own | Opt-in layers, drop a folder |
+| **Runtimes** | Bun, Node, Deno, Cloudflare Workers, edge, … | Bun only |
+| **Philosophy** | Bring your own everything | Batteries + one enforced convention |
+
+## When Hono is the better choice
+
+- You need **portability** — Cloudflare Workers, Deno, Node, or the edge. Hono runs everywhere; baguette is Bun-only.
+- You want a **minimal primitive** and prefer to assemble your own stack (your validation, your docs, your structure).
+- You're building something that isn't a conventional REST/RPC API.
+
+Hono is an excellent, mature, widely-used framework. If you want maximum control and minimum opinion, use it directly.
+
+## When baguette is the better choice
+
+- You're on **Bun**, building an API, and you'd rather not re-decide routing, validation, docs, auth, and background jobs on every project.
+- You want **one obvious way** to do each thing — enforced — so your team (or your AI agent) ships consistent code instead of five different patterns.
+- You want the batteries (auth, rate limiting, cron, queues, email, WebSockets) as **opt-in layers**, not a research project.
+
+## The honest part
+
+baguette is Hono underneath, so you never get locked out of it. Need a raw Hono handler? [`onApp(app)`](/docs/serve/) hands you the app, and the [escape hatch](/docs/define-route/) mounts plain handlers. If you outgrow baguette's conventions, you're already standing in Hono.
+
+We didn't build baguette because Hono was lacking — it's great. We built it because we were writing the *same* conventions (file routing, zod, docs, auth, cron) on top of Hono in every app, and wanted them decided once and enforced. That's the whole pitch.
+
+## Related
+
+- [baguette vs Elysia](/docs/compare/elysia/)
+- [Getting started](/docs/)

@@ -20,6 +20,8 @@ const pages = [
   { slug: "email", title: "Email", file: "src/routes/docs/email/index.mdx" },
   { slug: "cli", title: "CLI", file: "src/routes/docs/cli/index.mdx" },
   { slug: "clean-code-contract", title: "Clean-code contract", file: "src/routes/docs/clean-code-contract/index.mdx" },
+  { slug: "compare/hono", title: "baguette vs Hono", file: "src/routes/docs/compare/hono/index.mdx" },
+  { slug: "compare/elysia", title: "baguette vs Elysia", file: "src/routes/docs/compare/elysia/index.mdx" },
 ];
 
 const stripFrontmatter = (s) => s.replace(/^---\n[\s\S]*?\n---\n/, "").trim();

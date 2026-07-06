@@ -38,6 +38,13 @@ const NAV: NavGroup[] = [
       { label: "Clean-code contract", href: "/docs/clean-code-contract/" },
     ],
   },
+  {
+    title: "Compare",
+    items: [
+      { label: "vs Hono", href: "/docs/compare/hono/" },
+      { label: "vs Elysia", href: "/docs/compare/elysia/" },
+    ],
+  },
 ];
 
 export default component$(() => {
