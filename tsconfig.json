@@ -16,5 +16,5 @@
     "jsxImportSource": "react",
     "types": ["bun-types"]
   },
-  "exclude": ["node_modules", "site"]
+  "exclude": ["node_modules", "site", "create-baguette"]
 }
