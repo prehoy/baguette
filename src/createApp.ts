@@ -1,6 +1,6 @@
+import path from "node:path";
 import { OpenAPIHono } from "@hono/zod-openapi";
 import { Scalar } from "@scalar/hono-api-reference";
-import type { MiddlewareHandler } from "hono";
 import { bodyLimit } from "hono/body-limit";
 import { serveStatic } from "hono/bun";
 import { cors } from "hono/cors";
@@ -118,9 +118,10 @@ export async function createApp(opts: AppOptions = {}): Promise<OpenAPIHono> {
     }
   });
 
+  const basePath = opts.basePath ?? "/api";
   const routes = await loadRoutes(app, {
     routesDir: opts.routesDir ?? "./api",
-    basePath: opts.basePath ?? "/api",
+    basePath,
     auth: opts.auth,
     rateLimitStore: opts.rateLimitStore,
   });
@@ -156,9 +157,17 @@ export async function createApp(opts: AppOptions = {}): Promise<OpenAPIHono> {
   await opts.onApp?.(app);
 
   if (opts.spa) {
-    const root = opts.spa;
-    app.use("*", serveStatic({ root }));
-    app.get("*", serveStatic({ path: `${root}/index.html` }) as MiddlewareHandler); // SPA deep-link fallback
+    const dir = opts.spa;
+    const indexPath = path.join(path.resolve(dir), "index.html");
+    app.use("*", serveStatic({ root: dir })); // real files (assets, /)
+    // SPA deep-link fallback: any unmatched GET that isn't an API path gets
+    // index.html, so client-side routes (/download, …) load. `serveStatic({ path })`
+    // doesn't resolve reliably — read the file directly.
+    app.get("*", async (c) => {
+      if (c.req.path.startsWith(basePath)) return c.notFound(); // let /api/* 404 as API
+      const file = Bun.file(indexPath);
+      return (await file.exists()) ? c.html(await file.text()) : c.notFound();
+    });
   }
 
   return app;

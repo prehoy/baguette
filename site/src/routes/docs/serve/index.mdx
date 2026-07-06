@@ -38,7 +38,7 @@ bun run server.ts
 | `cors` | `true` → `origin:"*"`. For cookies/Bearer from a browser use `{ reflect: true, credentials: true }` — baguette **refuses** the invalid `origin:"*"` + `credentials` combo. |
 | `bodyLimit` | Max request body in bytes; larger → `413`. |
 | `rateLimitStore` | Backing store for per-route [`rateLimit`](/docs/define-route/). Default in-memory; `RATELIMIT_STORE=redis` (+ `REDIS_URL`) shares it across replicas. |
-| `spa` | Serve a static SPA (`spa: "./public"`) with an `index.html` deep-link fallback, mounted after the API. |
+| `spa` | Serve a built SPA + the API from **one origin**: static assets, and an `index.html` fallback for client-side routes (`/download`, …). Mounted after the API, so `/api/*` always wins and unknown `/api/*` still 404s. |
 | `onApp(app)` | Mount custom middleware/static on the Hono app before it listens. |
 | `onBoot()` | Run before the server accepts traffic — migrations, seed, warmup. |
 | `onShutdown()` | Run on SIGTERM/SIGINT after draining — close DB/cron. |
