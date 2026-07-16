@@ -38,7 +38,7 @@ bun run server.ts
 | `cors` | `true` → `origin:"*"`. For cookies/Bearer from a browser use `{ reflect: true, credentials: true }` — baguette **refuses** the invalid `origin:"*"` + `credentials` combo. |
 | `bodyLimit` | Max request body in bytes; larger → `413`. |
 | `rateLimitStore` | Backing store for per-route [`rateLimit`](/docs/define-route/). Default in-memory; `RATELIMIT_STORE=redis` (+ `REDIS_URL`) shares it across replicas. |
-| `spa` | Serve a built SPA + the API from **one origin**: static assets, and an `index.html` fallback for client-side routes (`/download`, …). Mounted after the API, so `/api/*` always wins and unknown `/api/*` still 404s. |
+| `spa` | Serve a built SPA + the API from **one origin**: static assets, and an `index.html` fallback for client-side routes (`/download`, …). Mounted after the API, so `/api/*` always wins and unknown `/api/*` still 404s. Pass an array to serve a different SPA per host — see [below](#one-spa-per-host). |
 | `onApp(app)` | Mount custom middleware/static on the Hono app before it listens. |
 | `onBoot()` | Run before the server accepts traffic — migrations, seed, warmup. |
 | `onShutdown()` | Run on SIGTERM/SIGINT after draining — close DB/cron. |
@@ -55,6 +55,22 @@ serve({
   onShutdown: () => db.end(),
 });
 ```
+
+## One SPA per host
+
+Serving a marketing site and an admin app from one process? Give `spa` an array. Each entry may pin a `host`; the entry without one is the fallback for every other host.
+
+```ts
+serve({
+  routesDir: "./api",
+  spa: [
+    { dir: "./admin-public", host: env.CRM_HOST }, // admin.example.com → admin build
+    { dir: "./public" },                           // everything else → marketing build
+  ],
+});
+```
+
+Host-scoped entries are matched first regardless of array order, so the hostless entry can never shadow them. Matching is on hostname only — a `Host` of `admin.example.com:3000` still matches `admin.example.com`. A bare string (`spa: "./public"`) behaves exactly as before.
 
 ## Auto-wiring the optional layers
 

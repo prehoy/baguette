@@ -1,6 +1,7 @@
 import path from "node:path";
 import { OpenAPIHono } from "@hono/zod-openapi";
 import { Scalar } from "@scalar/hono-api-reference";
+import type { Context } from "hono";
 import { bodyLimit } from "hono/body-limit";
 import { serveStatic } from "hono/bun";
 import { cors } from "hono/cors";
@@ -27,8 +28,12 @@ export interface AppOptions {
   bodyLimit?: number;
   /** Backing store for per-route `rateLimit` (default: memory, or redis via env). */
   rateLimitStore?: RateLimitStore;
-  /** Serve a static SPA (root dir) with an index.html fallback, mounted last. */
-  spa?: string;
+  /**
+   * Serve a static SPA (root dir) with an index.html fallback, mounted last.
+   * Array form mounts one SPA per host; the entry without `host` is the
+   * last-resort fallback and is mounted after all host-scoped ones.
+   */
+  spa?: string | Array<{ dir: string; host?: string }>;
   /**
    * Opt into WebSockets (off by default — no upgrade surface unless set).
    * `true` mounts the built-in room/channel pub/sub at /api/ws/:room/:channel.
@@ -157,17 +162,28 @@ export async function createApp(opts: AppOptions = {}): Promise<OpenAPIHono> {
   await opts.onApp?.(app);
 
   if (opts.spa) {
-    const dir = opts.spa;
-    const indexPath = path.join(path.resolve(dir), "index.html");
-    app.use("*", serveStatic({ root: dir })); // real files (assets, /)
-    // SPA deep-link fallback: any unmatched GET that isn't an API path gets
-    // index.html, so client-side routes (/download, …) load. `serveStatic({ path })`
-    // doesn't resolve reliably — read the file directly.
-    app.get("*", async (c) => {
-      if (c.req.path.startsWith(basePath)) return c.notFound(); // let /api/* 404 as API
-      const file = Bun.file(indexPath);
-      return (await file.exists()) ? c.html(await file.text()) : c.notFound();
-    });
+    const entries = typeof opts.spa === "string" ? [{ dir: opts.spa }] : [...opts.spa];
+    // Host-scoped entries first so the hostless one stays the last-resort
+    // fallback. Sort is stable, so caller order holds within each group.
+    entries.sort((a, b) => (a.host ? 0 : 1) - (b.host ? 0 : 1));
+    for (const { dir, host } of entries) {
+      const indexPath = path.join(path.resolve(dir), "index.html");
+      // Compare hostname only — the Host header carries :port, config values don't.
+      const want = host?.split(":")[0].toLowerCase();
+      const matches = (c: Context) =>
+        !want || c.req.header("host")?.split(":")[0].toLowerCase() === want;
+      const files = serveStatic({ root: dir });
+      app.use("*", (c, next) => (matches(c) ? files(c, next) : next())); // real files (assets, /)
+      // SPA deep-link fallback: any unmatched GET that isn't an API path gets
+      // index.html, so client-side routes (/download, …) load. `serveStatic({ path })`
+      // doesn't resolve reliably — read the file directly.
+      app.get("*", async (c, next) => {
+        if (!matches(c)) return next(); // another host's SPA (or nothing) handles it
+        if (c.req.path.startsWith(basePath)) return c.notFound(); // let /api/* 404 as API
+        const file = Bun.file(indexPath);
+        return (await file.exists()) ? c.html(await file.text()) : c.notFound();
+      });
+    }
   }
 
   return app;
