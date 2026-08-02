@@ -1,6 +1,6 @@
 import { readdir, stat } from "node:fs/promises";
 import path from "node:path";
-import { createRoute, type OpenAPIHono, type z } from "@hono/zod-openapi";
+import { createRoute, type OpenAPIHono, z } from "@hono/zod-openapi";
 import type { Context, MiddlewareHandler } from "hono";
 import { isBaguetteRoute, type AuthResolver, type RouteDescriptor } from "./defineRoute";
 import { ErrorSchema } from "./errorSchema";
@@ -89,11 +89,16 @@ function mountRoute(
 
   // Cast at the framework boundary so app code never needs one: zod-openapi's
   // handler return type can't see through our routeHandler wrapper.
+  // Form bodies (multipart / urlencoded) validate under the "form" target; JSON
+  // under "json". zod-openapi picks the target from the request body's media type.
+  const bodyTarget =
+    def.request?.contentType && def.request.contentType !== "application/json" ? "form" : "json";
+
   app.openapi(route, (async (c: any) => {
     const input = {
       params: def.request?.params ? c.req.valid("param") : undefined,
       query: def.request?.query ? c.req.valid("query") : undefined,
-      body: def.request?.body ? c.req.valid("json") : undefined,
+      body: def.request?.body ? c.req.valid(bodyTarget) : undefined,
     };
     const final = () => routeHandler({ name: routePath, c, handler: () => def.handler(c, input) });
     return chain.length ? runChain(c, chain, final) : final();
@@ -127,9 +132,30 @@ function buildRequest(req: RouteDescriptor["request"]) {
   const out: Record<string, unknown> = {};
   if (req.params) out.params = req.params;
   if (req.query) out.query = req.query;
-  if (req.body)
-    out.body = { content: { "application/json": { schema: req.body } }, required: true };
+  if (req.body) {
+    const ct = req.contentType ?? "application/json";
+    // zod-openapi can't render z.file() unless the leaf carries an openapi
+    // type/format. Tag file leaves in form bodies (JSON bodies untouched).
+    const schema = ct === "application/json" ? req.body : tagFileLeaves(req.body);
+    out.body = { content: { [ct]: { schema } }, required: true };
+  }
   return out as any;
+}
+
+// Rebuild a form body schema so every z.file() leaf carries the OpenAPI
+// { type: string, format: binary } zod-openapi needs. ponytail: handles the
+// object / array / file shapes a form body actually uses; other wrappers
+// (optional/default around a file) pass through untagged — add if a route needs it.
+function tagFileLeaves(schema: any): any {
+  const t = schema?._zod?.def?.type;
+  if (t === "file") return schema.openapi({ type: "string", format: "binary" });
+  if (t === "array") return z.array(tagFileLeaves(schema.element));
+  if (t === "object") {
+    const next: Record<string, any> = {};
+    for (const [k, v] of Object.entries(schema.shape)) next[k] = tagFileLeaves(v);
+    return z.object(next);
+  }
+  return schema;
 }
 
 function buildResponses(response: RouteDescriptor["response"]) {
@@ -142,19 +168,30 @@ function buildResponses(response: RouteDescriptor["response"]) {
   if (!response) {
     responses[200] = { description: "OK" };
   } else if (isZodSchema(response)) {
-    responses[200] = {
-      description: "OK",
-      content: { "application/json": { schema: response } },
-    };
+    responses[200] = okResponse(response);
   } else {
     for (const [code, schema] of Object.entries(response)) {
-      responses[Number(code)] = {
-        description: "OK",
-        content: { "application/json": { schema } },
-      };
+      responses[Number(code)] = okResponse(schema as z.ZodType);
     }
   }
   return responses as any;
+}
+
+// A `z.file()` response is a binary download (DOCX/ODT export, etc.): emit
+// application/octet-stream + { type: string, format: binary } so Hey API generates
+// a Blob client. The handler still sets the real Content-Type header at runtime.
+function okResponse(schema: z.ZodType) {
+  if (isFileSchema(schema)) {
+    return {
+      description: "OK",
+      content: { "application/octet-stream": { schema: { type: "string", format: "binary" } } },
+    };
+  }
+  return { description: "OK", content: { "application/json": { schema } } };
+}
+
+function isFileSchema(x: unknown): boolean {
+  return (x as any)?._zod?.def?.type === "file"; // zod4 ZodFile tag
 }
 
 function isZodSchema(x: unknown): x is z.ZodType {

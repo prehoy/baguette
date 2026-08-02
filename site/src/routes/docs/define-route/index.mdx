@@ -68,6 +68,30 @@ request: {
 
 Whatever you declare arrives on the handler's second argument, validated and fully typed. Anything that fails validation returns `400` before your handler runs.
 
+#### File uploads (`multipart/form-data`)
+
+Set `request.contentType` to validate the body as a form instead of JSON. Use `z.file()` for a file field and `z.coerce.number()` (etc.) for text fields — form values arrive as strings.
+
+```ts
+request: {
+  contentType: "multipart/form-data",
+  body: z.object({
+    projectId: z.coerce.number(),
+    file: z.file(),
+  }),
+}
+```
+
+`body.file` is a `File`. The OpenAPI spec marks it `format: binary`, so a generated client (e.g. Hey API) produces a `FormData` upload.
+
+For several files, use `z.array(z.file())` and send the field once per file:
+
+```ts
+body: z.object({ files: z.array(z.file()) })
+```
+
+One caveat: an array field needs at least two entries to arrive as an array — to send exactly one file to an array field, repeat the field or name it `files[]`. A single-file endpoint should use `z.file()` (not an array).
+
 ### `response`
 
 A single zod schema is the `200` body:
@@ -86,6 +110,19 @@ response: {
 ```
 
 The response schema feeds the OpenAPI spec so the generated docs describe exactly what a caller receives.
+
+For a binary download (DOCX/ODT export, an image, a PDF), use `z.file()` as the response:
+
+```ts
+response: z.file(),
+handler: (c) =>
+  c.body(bytes, 200, {
+    "Content-Type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "Content-Disposition": 'attachment; filename="export.docx"',
+  }),
+```
+
+The spec describes it as `application/octet-stream` with `format: binary` (a generated client returns a `Blob`). You set the real `Content-Type` and filename on the response at runtime.
 
 ### `handler`
 

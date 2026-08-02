@@ -43,7 +43,17 @@ export interface RouteConfig<
   rateLimit?: RateLimitOptions;
   /** Hono middleware to run before the handler (after auth). */
   middleware?: MiddlewareHandler[];
-  request?: { params?: P; query?: Q; body?: B };
+  request?: {
+    params?: P;
+    query?: Q;
+    body?: B;
+    /**
+     * Request body media type (default `application/json`). Set to
+     * `multipart/form-data` (file uploads) or `application/x-www-form-urlencoded`
+     * to validate the body as a form — use `z.file()` / `z.array(z.file())` fields.
+     */
+    contentType?: "application/json" | "multipart/form-data" | "application/x-www-form-urlencoded";
+  };
   /** A single zod schema (200) or a `{ status: schema }` map. */
   response?: z.ZodType | Record<number, z.ZodType>;
   handler: (
