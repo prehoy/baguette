@@ -7,7 +7,17 @@ import logger from "./logger";
 import processError from "./processError";
 
 export interface CronDefinition {
-  details: { name: string; log?: boolean; cron: { value: string; tag?: string } };
+  details: {
+    name: string;
+    log?: boolean;
+    cron: { value: string; tag?: string };
+    /**
+     * Max wall-clock for one tick, ms. Overrides `CRON_JOB_TIMEOUT_MS`. On timeout
+     * the tick rejects (logged as an error) and the lock releases, so a hung
+     * `process()` can't freeze the job until restart. `0` disables the timeout.
+     */
+    timeoutMs?: number;
+  };
   process: () => Promise<unknown>;
 }
 
@@ -147,6 +157,20 @@ export async function loadCronJobs(dir: string): Promise<CronDefinition[]> {
   return jobs;
 }
 
+const DEFAULT_JOB_TIMEOUT_MS = 300_000; // 5 min; env/per-job override, 0 = off
+
+// Race a tick against a timer so a hung process() can't hold the lock forever.
+// The timeout rejects the tick promise; it does NOT cancel the in-flight I/O (no
+// AbortSignal) — the stuck work may keep running, but it no longer owns the lock,
+// so the next tick can acquire. Bound external clients (DB/HTTP) as well.
+function withTimeout<T>(p: Promise<T>, ms: number, name: string): Promise<T> {
+  let timer: ReturnType<typeof setTimeout>;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error(`Cron job ${name} timed out after ${ms}ms`)), ms);
+  });
+  return Promise.race([p, timeout]).finally(() => clearTimeout(timer)) as Promise<T>;
+}
+
 // One tick, factored out so it's testable without a scheduler or a clock.
 export async function runCronJob(
   job: CronDefinition,
@@ -154,9 +178,11 @@ export async function runCronJob(
 ): Promise<void> {
   const name = job.details.name;
   if (ctx.isEnabled && !(await ctx.isEnabled(name))) return;
+  const timeoutMs = job.details.timeoutMs ?? Number(Bun.env.CRON_JOB_TIMEOUT_MS ?? DEFAULT_JOB_TIMEOUT_MS);
   const run = async () => {
     try {
-      const result = await job.process();
+      const p = job.process();
+      const result = timeoutMs > 0 ? await withTimeout(p, timeoutMs, name) : await p;
       ctx.onRun?.(name, result);
     } catch (e) {
       logger.error({ message: `Error in cron job ${name}`, error: processError(e) });

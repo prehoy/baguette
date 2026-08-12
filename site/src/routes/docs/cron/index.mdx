@@ -55,6 +55,30 @@ Per-backend URL overrides exist if the lock store differs from your app's main o
 
 > **Note on `sqlite`:** the lock lives in one file, so it coordinates only processes that share it — a single node or a shared volume, **not** separate machines. For true cross-replica locking use `postgres` or `redis`.
 
+## Hang safety
+
+Overlap-safe is not the same as hang-safe. If a tick's `process()` hangs — a stuck HTTP call, a frozen DB query, a promise that never settles — it holds the job's lock while it hangs. Without a bound, that lock is held until the process restarts, and every later tick is skipped in the meantime.
+
+So each tick runs under a timeout. If `process()` doesn't settle in time, the tick rejects (logged as an error) and the lock releases — the next tick can run. Default **5 minutes**; tune it globally or per job:
+
+```bash
+CRON_JOB_TIMEOUT_MS=300000   # global default (ms); 0 disables the timeout
+```
+
+```ts
+// cron/export.ts — a long job overrides the global default
+export const details = {
+  name: "export",
+  cron: { value: "0 * * * *" },
+  timeoutMs: 900_000, // 15 min for this job
+};
+```
+
+Two things to know:
+
+- **The timeout frees the lock; it does not cancel the work.** There is no `AbortSignal` — stuck I/O may keep running in the background, it just no longer owns the lock. Bound your external clients (DB and HTTP timeouts) as well, so the work itself gives up, not only the lock.
+- **Liveness ≠ cron liveness.** An HTTP health probe says nothing about whether ticks are firing — a pod can be `Ready` while a job is dead. Alert on a domain signal (a "last successful run" timestamp the job writes), not just `/health`.
+
 ## Running a job on demand
 
 `startCron()` returns a controller so you can fire a job outside its schedule — e.g. run a sync right after a user action. To get the handle, turn off serve's auto-wiring and start cron yourself (otherwise the jobs schedule twice):
