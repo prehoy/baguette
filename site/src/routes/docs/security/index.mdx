@@ -29,7 +29,7 @@ A route with `auth: true` and no resolver throws at boot — you can't ship an u
 
 ## Rate limiting
 
-Cap brute-force and email-bombing per route. Runs **before** auth, keyed by client IP (honouring `X-Forwarded-For` behind a proxy):
+Cap brute-force and email-bombing per route. Runs **before** auth, keyed by client IP (spoof-safe behind a proxy — see [Client IP](#client-ip)):
 
 ```ts
 export default defineRoute({
@@ -47,6 +47,16 @@ rateLimit: { limit: 3, window: "1h", key: (c) => c.req.query("email") ?? clientI
 ```
 
 Counters are in-memory by default; set `RATELIMIT_STORE=redis` (+ `REDIS_URL`) to share limits across replicas. Over the limit → `429` with `Retry-After`.
+
+### Client IP
+
+`clientIp(c)` never trusts the **leftmost** `X-Forwarded-For` entry — clients can put anything there. It resolves, in order:
+
+1. `RATELIMIT_IP_HEADER` (e.g. `cf-connecting-ip`) if set and present. Only safe if the origin accepts traffic **only** from that edge.
+2. The `X-Forwarded-For` entry `RATELIMIT_TRUSTED_HOPS` from the right (default `1` = the IP your nearest proxy saw). Set it to the number of proxies that append to XFF; `0` ignores XFF.
+3. The socket address.
+
+Per call: `clientIp(c, { ipHeader: "cf-connecting-ip", trustedProxyHops: 2 })`.
 
 ## Security headers
 

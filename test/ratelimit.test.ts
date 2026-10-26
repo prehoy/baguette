@@ -55,3 +55,33 @@ test("custom key buckets independently (e.g. by email, not IP)", async () => {
   expect((await app.request("/?u=alice")).status).toBe(429); // alice over limit
   expect((await app.request("/?u=bob")).status).toBe(200); // bob independent
 });
+
+test("clientIp ignores a forged leftmost X-Forwarded-For (spoof-safe default)", async () => {
+  const app = new Hono();
+  app.use("*", rateLimit({ limit: 1, window: "1m" }, memoryStore()));
+  app.get("/", (c) => c.json({ ok: true }));
+  // Proxy appends the real peer (9.9.9.9); the client rotates the leftmost entry.
+  const req = (forged: string) => app.request("/", { headers: { "x-forwarded-for": `${forged}, 9.9.9.9` } });
+  expect((await req("1.1.1.1")).status).toBe(200);
+  expect((await req("2.2.2.2")).status).toBe(429); // same bucket despite a new forged IP
+});
+
+test("clientIp honours trustedProxyHops and ipHeader", async () => {
+  const { clientIp } = await import("../src/index");
+  const app = new Hono();
+  app.get("/", (c) =>
+    c.json({
+      def: clientIp(c),
+      two: clientIp(c, { trustedProxyHops: 2 }),
+      many: clientIp(c, { trustedProxyHops: 9 }),
+      cf: clientIp(c, { ipHeader: "cf-connecting-ip" }),
+      cfMissing: clientIp(c, { ipHeader: "x-nope" }),
+    }),
+  );
+  const r = await (
+    await app.request("/", {
+      headers: { "x-forwarded-for": "6.6.6.6, 5.5.5.5, 10.0.0.1", "cf-connecting-ip": "5.5.5.5" },
+    })
+  ).json();
+  expect(r).toEqual({ def: "10.0.0.1", two: "5.5.5.5", many: "6.6.6.6", cf: "5.5.5.5", cfMissing: "10.0.0.1" });
+});
