@@ -164,7 +164,7 @@ export default defineRoute({
 });
 ```
 
-`rateLimit` runs **before** auth, so brute-force and email-bombing are capped before they reach your resolver. It keys by client IP (honouring `X-Forwarded-For` behind a proxy) by default — pass `key: (c) => …` to bucket by user or email instead. The default counter is in-process; set `RATELIMIT_STORE=redis` (+ `REDIS_URL`) to share it across replicas.
+`rateLimit` runs **before** auth, so brute-force and email-bombing are capped before they reach your resolver. It keys by client IP (spoof-safe: rightmost trusted `X-Forwarded-For` hop, or `RATELIMIT_IP_HEADER`) by default — pass `key: (c) => …` to bucket by user or email instead. The default counter is in-process; set `RATELIMIT_STORE=redis` (+ `REDIS_URL`) to share it across replicas.
 
 Type `c.get("user")` once by augmenting `BaguetteUser`:
 

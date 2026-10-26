@@ -68,10 +68,44 @@ export function parseWindow(w: number | string): number {
   return Number(m[1]) * UNIT[m[2]];
 }
 
-// Real client IP, honouring the proxy (Traefik/cluster ingress sets X-Forwarded-For).
-export function clientIp(c: Context): string {
-  const xff = c.req.header("x-forwarded-for");
-  if (xff) return xff.split(",")[0].trim();
+export interface ClientIpOptions {
+  /**
+   * Header set by a trusted edge that holds the single real client IP, e.g.
+   * "cf-connecting-ip" (Cloudflare) or "x-real-ip". Only safe if the origin is
+   * reachable ONLY through that edge. Default: env RATELIMIT_IP_HEADER, else none.
+   */
+  ipHeader?: string;
+  /**
+   * Number of trusted proxies in front of the app that APPEND to X-Forwarded-For.
+   * The client IP is the entry `hops` from the right (the one the outermost trusted
+   * proxy saw); everything to its left is client-controlled. 0 = ignore XFF and use
+   * the socket address. Default: env RATELIMIT_TRUSTED_HOPS, else 1.
+   */
+  trustedProxyHops?: number;
+}
+
+/**
+ * Real client IP for rate-limit keys. Spoof-safe by default: a client can prepend
+ * anything to X-Forwarded-For, so the LEFTMOST entry is never trusted. Order:
+ *   1. `ipHeader` (if configured and present)
+ *   2. X-Forwarded-For entry `trustedProxyHops` from the right (default 1 = last)
+ *   3. socket remote address (Bun server.requestIP via hono/bun getConnInfo)
+ */
+export function clientIp(c: Context, opts: ClientIpOptions = {}): string {
+  const ipHeader = opts.ipHeader ?? Bun.env.RATELIMIT_IP_HEADER;
+  if (ipHeader) {
+    const v = c.req.header(ipHeader)?.trim();
+    if (v) return v;
+  }
+  const raw = opts.trustedProxyHops ?? Number(Bun.env.RATELIMIT_TRUSTED_HOPS || 1);
+  const hops = Number.isInteger(raw) && raw >= 0 ? raw : 1;
+  const xff = hops > 0 ? c.req.header("x-forwarded-for") : undefined;
+  if (xff) {
+    const ips = xff.split(",").map((s) => s.trim()).filter(Boolean);
+    // Fewer entries than hops: request skipped some proxy hop; take the leftmost we have.
+    const ip = ips[Math.max(0, ips.length - hops)];
+    if (ip) return ip;
+  }
   try {
     return getConnInfo(c).remote.address ?? "unknown";
   } catch {
