@@ -3,9 +3,8 @@
 **Blazingly fast, zero-config Bun + Hono API framework.** Drop a file, get a
 typed, documented, validated endpoint. AI-proof by convention.
 
-Extracted from the shared plumbing of text-apps-api, lawbot-api, hcm-cloud, and
-sim-api-bun (~400 LOC of copy-pasted framework glue that had drifted across
-four repos). Goal: one package, all four converge on it.
+Common API plumbing (routing, validation, OpenAPI, cron, automations) packaged
+once instead of being copy-pasted between projects.
 
 ## Positioning
 Blazingly fast · zero-config · type-safe end to end · **the framework your AI

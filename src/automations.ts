@@ -55,7 +55,7 @@ export async function dispatchAutomation(
 }
 
 // Idempotent: creates a NOTIFY trigger on each table for insert/update/delete.
-// Same DDL the house repos used, parameterized. Raw SQL — ORM-agnostic.
+// Parameterized DDL. Raw SQL — ORM-agnostic.
 export async function ensureTriggers(sql: postgres.Sql, tables: string[]): Promise<void> {
   for (const table of tables) {
     const t = table.toLowerCase();
