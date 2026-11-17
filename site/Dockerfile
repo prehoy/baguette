@@ -1,6 +1,6 @@
 # Static Qwik site pre-rendered by the static adapter, served by nginx.
 # Node+npm for the build — Qwik's SSG is reliable on Node's worker_threads (Bun
-# silently emits 0 pages in-container), matching the prehoy / darka.io builds.
+# silently emits 0 pages in-container).
 
 # --- build (Node + npm) ---
 FROM node:20-slim AS build
